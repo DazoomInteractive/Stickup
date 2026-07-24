@@ -45,17 +45,16 @@ export default function GameCanvas() {
 
   const btnSx = (side: 'left' | 'right') => ({
     position: 'absolute',
-    bottom: { xs: 80, lg: 40 },
-    [side]: { xs: 16, lg: 24 },
+    bottom: 80,
+    [side]: 16,
     zIndex: 100,
-    // Mobile size / Desktop size via breakpoints
-    width: { xs: 94, lg: 148 },
-    height: { xs: 94, lg: 148 },
+    width: 94,
+    height: 94,
     borderRadius: '50%',
     border: '2px solid rgba(255,255,255,0.8)',
     background: 'rgba(59,130,246,0.5)',
     color: '#FFFFFF',
-    fontSize: { xs: 40, lg: 64 },
+    fontSize: 40,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -67,6 +66,13 @@ export default function GameCanvas() {
     '&:active': {
       transform: 'scale(0.92)',
       background: 'rgba(59,130,246,0.9)',
+    },
+    '@media (min-width: 1024px)': {
+      width: 160,
+      height: 160,
+      fontSize: 72,
+      bottom: 40,
+      [side]: 24,
     },
   } as const);
 
