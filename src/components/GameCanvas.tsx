@@ -1,11 +1,30 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import { GameEngine } from '../game/GameEngine';
 import { GAME_WIDTH, GAME_HEIGHT } from '../game/constants';
 
+function isTouchDevice(): boolean {
+  return (
+    'ontouchstart' in window ||
+    (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+    navigator.maxTouchPoints > 0
+  );
+}
+
+function isWideScreen(): boolean {
+  return window.matchMedia
+    ? window.matchMedia('(min-width: 1024px)').matches
+    : window.innerWidth >= 1024;
+}
+
+function computeDesktop(): boolean {
+  return isWideScreen() && !isTouchDevice();
+}
+
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
+  const [isDesktop, setIsDesktop] = useState<boolean>(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -19,6 +38,13 @@ export default function GameCanvas() {
       engine.destroy();
       engineRef.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    setIsDesktop(computeDesktop());
+    const onResize = () => setIsDesktop(computeDesktop());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   const handleTouchStart = (side: 'left' | 'right') => (e: React.TouchEvent) => {
@@ -43,38 +69,37 @@ export default function GameCanvas() {
     else engineRef.current?.setTouchRight(false);
   };
 
-  const btnSx = (side: 'left' | 'right') => ({
-    position: 'absolute',
-    bottom: 80,
-    [side]: 16,
-    zIndex: 100,
-    width: 94,
-    height: 94,
-    borderRadius: '50%',
-    border: '2px solid rgba(255,255,255,0.8)',
-    background: 'rgba(59,130,246,0.5)',
-    color: '#FFFFFF',
-    fontSize: 40,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    userSelect: 'none',
-    touchAction: 'none',
-    backdropFilter: 'blur(4px)',
-    transition: 'transform 0.08s ease, background 0.08s ease',
-    '&:active': {
-      transform: 'scale(0.92)',
-      background: 'rgba(59,130,246,0.9)',
-    },
-    '@media (min-width: 1024px)': {
-      width: 160,
-      height: 160,
-      fontSize: 72,
-      bottom: 40,
-      [side]: 24,
-    },
-  } as const);
+  const btnSx = (side: 'left' | 'right') => {
+    const base = {
+      position: 'absolute' as const,
+      bottom: 80,
+      [side]: 16,
+      zIndex: 100,
+      width: 94,
+      height: 94,
+      borderRadius: '50%',
+      border: '2px solid rgba(255,255,255,0.8)',
+      background: 'rgba(59,130,246,0.5)',
+      color: '#FFFFFF',
+      fontSize: 40,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      userSelect: 'none',
+      touchAction: 'none',
+      backdropFilter: 'blur(4px)',
+      transition: 'transform 0.08s ease, background 0.08s ease',
+      '&:active': {
+        transform: 'scale(0.92)',
+        background: 'rgba(59,130,246,0.9)',
+      },
+    };
+    if (isDesktop) {
+      return { ...base, width: 150, height: 150, fontSize: 68, bottom: 48, [side]: 28 };
+    }
+    return base;
+  };
 
   return (
     <Box
