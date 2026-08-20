@@ -50,6 +50,9 @@ export class GameEngine {
   private height = 0;
   private coinCount = 0;
   private highestY = 0; // track lowest world Y value (highest point)
+  private bestScore = 0;
+
+  private static readonly BEST_SCORE_KEY = 'skyjumper_best_score';
 
   // Loop
   private rafId = 0;
@@ -102,6 +105,9 @@ export class GameEngine {
 
     this.boundPointerMove = (e: PointerEvent) => this.onPointerMove(e);
     this.boundPointerDown = (e: PointerEvent) => this.onPointerDown(e);
+
+    const stored = localStorage.getItem(GameEngine.BEST_SCORE_KEY);
+    this.bestScore = stored ? parseInt(stored, 10) || 0 : 0;
   }
 
   // ---- Lifecycle ----
@@ -160,6 +166,10 @@ export class GameEngine {
 
   private gameOver(): void {
     this.audio.playGameOver();
+    if (this.height > this.bestScore) {
+      this.bestScore = this.height;
+      localStorage.setItem(GameEngine.BEST_SCORE_KEY, String(this.bestScore));
+    }
     this.fadeTo(STATE.GAME_OVER);
   }
 
@@ -373,7 +383,7 @@ export class GameEngine {
     this.drawBackground();
 
     if (this.state === STATE.MAIN_MENU) {
-      this.ui.drawMainMenu(this.ctx, this.transitionAlpha, this.audio.isMuted());
+      this.ui.drawMainMenu(this.ctx, this.transitionAlpha, this.audio.isMuted(), this.bestScore);
       return;
     }
 
@@ -409,42 +419,74 @@ export class GameEngine {
   }
 
   private drawBackground(): void {
-    // Gradient
+    // Sky gradient: light blue at top → mid blue → darker blue at bottom
     const grad = this.ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
     grad.addColorStop(0, COLORS.bgTop);
+    grad.addColorStop(0.55, COLORS.bgMid);
     grad.addColorStop(1, COLORS.bgBottom);
     this.ctx.fillStyle = grad;
     this.ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // Grid lines (parallax with camera)
-    const gridSize = 40;
-    const offsetY = this.camera.y * 0.3; // slow parallax
-    const startY = -(offsetY % gridSize);
+    // Soft stylized cartoon clouds (parallax with camera)
+    this.drawClouds();
+  }
 
-    this.ctx.strokeStyle = COLORS.gridLine;
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    for (let x = 0; x <= GAME_WIDTH; x += gridSize) {
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, GAME_HEIGHT);
-    }
-    for (let y = startY; y <= GAME_HEIGHT; y += gridSize) {
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(GAME_WIDTH, y);
-    }
-    this.ctx.stroke();
+  // Predefined cloud shapes at fixed world positions so they parallax
+  // naturally as the camera rises. Each cloud is a cluster of circles.
+  private static readonly CLOUDS: { x: number; y: number; scale: number; speed: number }[] = [
+    { x: 60, y: 120, scale: 1.0, speed: 0.15 },
+    { x: 300, y: 60, scale: 0.7, speed: 0.10 },
+    { x: 380, y: 600, scale: 0.85, speed: 0.12 },
+    { x: 100, y: 680, scale: 1.1, speed: 0.18 },
+    { x: 340, y: 650, scale: 0.6, speed: 0.08 },
+    { x: 220, y: 760, scale: 1.3, speed: 0.22 },
+    { x: 50, y: 740, scale: 0.75, speed: 0.11 },
+  ];
 
-    // Bold lines every 5 cells
-    this.ctx.strokeStyle = COLORS.gridLineBold;
-    this.ctx.lineWidth = 1.5;
-    this.ctx.beginPath();
-    const boldSize = gridSize * 5;
-    const boldStartY = -(offsetY % boldSize);
-    for (let y = boldStartY; y <= GAME_HEIGHT; y += boldSize) {
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(GAME_WIDTH, y);
+  private drawClouds(): void {
+    const span = 900; // vertical repeat distance for cloud wrapping
+    for (const c of GameEngine.CLOUDS) {
+      const parallaxY = this.camera.y * c.speed;
+      // Wrap clouds so they always cover the screen as camera rises
+      let screenY = c.y - parallaxY;
+      screenY = ((screenY % span) + span) % span;
+      // Draw two copies to cover the wrap seam
+      this.drawCloud(c.x, screenY, c.scale);
+      this.drawCloud(c.x, screenY - span, c.scale);
     }
-    this.ctx.stroke();
+  }
+
+  private drawCloud(x: number, y: number, scale: number): void {
+    const s = scale;
+    this.ctx.save();
+    this.ctx.translate(x, y);
+    this.ctx.scale(s, s);
+
+    // Soft shadow underneath
+    this.ctx.fillStyle = COLORS.cloudShadow;
+    this.drawCloudShape(0, 6);
+    // Main cloud body
+    this.ctx.fillStyle = COLORS.cloud;
+    this.drawCloudShape(0, 0);
+
+    this.ctx.restore();
+  }
+
+  private drawCloudShape(ox: number, oy: number): void {
+    this.ctx.beginPath();
+    // A cluster of overlapping circles forming a fluffy cartoon cloud
+    const puffs: { x: number; y: number; r: number }[] = [
+      { x: 0, y: 0, r: 26 },
+      { x: 24, y: -6, r: 22 },
+      { x: 48, y: 0, r: 26 },
+      { x: 20, y: 12, r: 24 },
+      { x: -16, y: 8, r: 20 },
+    ];
+    for (const p of puffs) {
+      this.ctx.moveTo(ox + p.x + p.r, oy + p.y);
+      this.ctx.arc(ox + p.x, oy + p.y, p.r, 0, Math.PI * 2);
+    }
+    this.ctx.fill();
   }
 
   // ---- Input from on-screen touch buttons ----

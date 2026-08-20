@@ -45,8 +45,11 @@ export const PIXELS_PER_METER = 35;
 
 // Colors (paper / grid vector style palette)
 export const COLORS = {
-  bgTop: '#f7f9fb',
-  bgBottom: '#e8eef4',
+  bgTop: '#a3d4f5',
+  bgMid: '#6bb6e8',
+  bgBottom: '#2e7bc7',
+  cloud: '#ffffff',
+  cloudShadow: '#d6e8f7',
   gridLine: '#d7dee8',
   gridLineBold: '#c4cdda',
   player: '#2b2b2b',
@@ -66,7 +69,7 @@ export const COLORS = {
   coinDark: '#ff9800',
   coinText: '#ff8f00',
   text: '#37474f',
-  textLight: '#78909c',
+  textLight: '#e3f2fd',
   button: '#4a90d9',
   buttonHover: '#5ba0e9',
   buttonActive: '#3a7dc0',

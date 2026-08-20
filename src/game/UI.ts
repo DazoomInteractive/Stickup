@@ -128,7 +128,7 @@ export class UI {
 
   // ---- Drawing ----
 
-  drawMainMenu(ctx: CanvasRenderingContext2D, alpha: number, muted: boolean): void {
+  drawMainMenu(ctx: CanvasRenderingContext2D, alpha: number, muted: boolean, bestScore: number): void {
     this.update(0.016); // keep scales alive
     ctx.globalAlpha = alpha;
 
@@ -138,12 +138,17 @@ export class UI {
     // Title — 3D layered sky-blue with white outline
     this.drawTitle(ctx, 'Sky Jumper', GAME_WIDTH / 2, GAME_HEIGHT * 0.30);
 
+    // Best score badge (just below the title)
+    ctx.fillStyle = COLORS.coinText;
+    ctx.font = 'bold 20px Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`Best Score: ${bestScore}m`, GAME_WIDTH / 2, GAME_HEIGHT * 0.37);
+
     // Subtitle
     ctx.fillStyle = COLORS.textLight;
     ctx.font = '400 18px Roboto, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('How high can you climb?', GAME_WIDTH / 2, GAME_HEIGHT * 0.36);
+    ctx.fillText('How high can you climb?', GAME_WIDTH / 2, GAME_HEIGHT * 0.42);
 
     // Play button
     this.drawButton(ctx, 'play');
@@ -377,30 +382,76 @@ export class UI {
     ctx.textBaseline = 'middle';
     ctx.font = '900 56px Roboto, sans-serif';
 
-    // Drop shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    ctx.fillText(text, cx + 4, cy + 5);
+    // Outer glow — soft blue halo around the text
+    ctx.shadowColor = '#42a5f5';
+    ctx.shadowBlur = 24;
 
-    // 3D depth layers (darker blue receding)
+    // 3D depth layers (darker blue receding, stacked behind the face)
     const depthLayers = [
-      { dx: 0, dy: 4, color: '#1565c0' },
-      { dx: 0, dy: 3, color: '#1976d2' },
-      { dx: 0, dy: 2, color: '#1e88e5' },
+      { dx: 0, dy: 6, color: '#0d47a1' },
+      { dx: 0, dy: 5, color: '#1565c0' },
+      { dx: 0, dy: 4, color: '#1976d2' },
+      { dx: 0, dy: 3, color: '#1e88e5' },
+      { dx: 0, dy: 2, color: '#2196f3' },
     ];
     for (const layer of depthLayers) {
       ctx.fillStyle = layer.color;
       ctx.fillText(text, cx + layer.dx, cy + layer.dy);
     }
 
-    // White outline
+    // White outline for crisp edge
+    ctx.shadowBlur = 0;
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 4;
     ctx.lineJoin = 'round';
     ctx.strokeText(text, cx, cy);
 
-    // Main face — bright sky blue
-    ctx.fillStyle = '#42a5f5';
+    // Main face — saturated blue with a subtle inner glow
+    ctx.shadowColor = '#90caf9';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#1976d2';
     ctx.fillText(text, cx, cy);
+
+    // Tiny star accent above the second word
+    ctx.shadowBlur = 0;
+    const fullWidth = ctx.measureText(text).width;
+    const jumperWidth = ctx.measureText('Jumper').width;
+    const starX = cx + fullWidth / 2 - jumperWidth / 2;
+    this.drawStar(ctx, starX, cy - 34, 5, 7, 3.5);
+
+    ctx.restore();
+  }
+
+  private drawStar(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    cy: number,
+    spikes: number,
+    outerR: number,
+    innerR: number,
+  ): void {
+    ctx.save();
+    ctx.beginPath();
+    let rot = -Math.PI / 2;
+    const step = Math.PI / spikes;
+    ctx.moveTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR);
+    for (let i = 0; i < spikes; i++) {
+      rot += step;
+      ctx.lineTo(cx + Math.cos(rot) * innerR, cy + Math.sin(rot) * innerR);
+      rot += step;
+      ctx.lineTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR);
+    }
+    ctx.closePath();
+
+    // Golden star with glow
+    ctx.shadowColor = '#ffd54f';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#ffd54f';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ff8f00';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
     ctx.restore();
   }

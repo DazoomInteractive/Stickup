@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import { GameEngine } from '../game/GameEngine';
-import { GAME_WIDTH, GAME_HEIGHT } from '../game/constants';
+import { GAME_WIDTH, GAME_HEIGHT, STATE } from '../game/constants';
 
 function isTouchDevice(): boolean {
   return (
@@ -25,6 +25,7 @@ export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const [isDesktop, setIsDesktop] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -34,7 +35,15 @@ export default function GameCanvas() {
     engineRef.current = engine;
     engine.start();
 
+    let raf = 0;
+    const syncState = () => {
+      setIsPlaying(engine.getState() === STATE.PLAYING);
+      raf = requestAnimationFrame(syncState);
+    };
+    raf = requestAnimationFrame(syncState);
+
     return () => {
+      cancelAnimationFrame(raf);
       engine.destroy();
       engineRef.current = null;
     };
@@ -138,32 +147,36 @@ export default function GameCanvas() {
           }}
         />
 
-        {/* On-screen controls — always visible, larger on desktop */}
-        <Box
-          component="button"
-          onTouchStart={handleTouchStart('left')}
-          onTouchEnd={handleTouchEnd('left')}
-          onTouchCancel={handleTouchEnd('left')}
-          onMouseDown={handleMouseDown('left')}
-          onMouseUp={handleMouseUp('left')}
-          onMouseLeave={handleMouseUp('left')}
-          sx={btnSx('left')}
-        >
-          {'\u25C0'}
-        </Box>
+        {/* On-screen controls — visible only while playing */}
+        {isPlaying && (
+          <Box
+            component="button"
+            onTouchStart={handleTouchStart('left')}
+            onTouchEnd={handleTouchEnd('left')}
+            onTouchCancel={handleTouchEnd('left')}
+            onMouseDown={handleMouseDown('left')}
+            onMouseUp={handleMouseUp('left')}
+            onMouseLeave={handleMouseUp('left')}
+            sx={btnSx('left')}
+          >
+            {'\u25C0'}
+          </Box>
+        )}
 
-        <Box
-          component="button"
-          onTouchStart={handleTouchStart('right')}
-          onTouchEnd={handleTouchEnd('right')}
-          onTouchCancel={handleTouchEnd('right')}
-          onMouseDown={handleMouseDown('right')}
-          onMouseUp={handleMouseUp('right')}
-          onMouseLeave={handleMouseUp('right')}
-          sx={btnSx('right')}
-        >
-          {'\u25B6'}
-        </Box>
+        {isPlaying && (
+          <Box
+            component="button"
+            onTouchStart={handleTouchStart('right')}
+            onTouchEnd={handleTouchEnd('right')}
+            onTouchCancel={handleTouchEnd('right')}
+            onMouseDown={handleMouseDown('right')}
+            onMouseUp={handleMouseUp('right')}
+            onMouseLeave={handleMouseUp('right')}
+            sx={btnSx('right')}
+          >
+            {'\u25B6'}
+          </Box>
+        )}
       </Box>
     </Box>
   );
