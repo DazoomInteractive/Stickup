@@ -1,0 +1,6 @@
+{
+  "name": "Sky Jumper 2D Game",
+  "description": "A 2D vertical platformer jumping game built with React, Material UI, and HTML5 Canvas",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

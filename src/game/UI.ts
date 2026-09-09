@@ -129,7 +129,6 @@ export class UI {
   // ---- Drawing ----
 
   drawMainMenu(ctx: CanvasRenderingContext2D, alpha: number, muted: boolean, bestScore: number): void {
-    this.update(0.016); // keep scales alive
     ctx.globalAlpha = alpha;
 
     // Cartoon logo: stickman bouncing on a green platform
@@ -156,7 +155,8 @@ export class UI {
     // Controls hint
     ctx.fillStyle = COLORS.textLight;
     ctx.font = '400 14px Roboto, sans-serif';
-    ctx.fillText('← → or A / D to move', GAME_WIDTH / 2, GAME_HEIGHT * 0.72);
+    ctx.fillText('← → or A / D to move', GAME_WIDTH / 2, GAME_HEIGHT * 0.70);
+    ctx.fillText('Space / Enter or Tap to jump into action', GAME_WIDTH / 2, GAME_HEIGHT * 0.74);
 
     // Mute button + tooltip
     this.drawMuteButton(ctx, muted);
@@ -185,8 +185,9 @@ export class UI {
     alpha: number,
     height: number,
     coins: number,
+    bestScore: number,
+    isNewBest: boolean,
   ): void {
-    this.update(0.016);
     ctx.globalAlpha = alpha;
 
     // Overlay
@@ -197,17 +198,33 @@ export class UI {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = COLORS.text;
-    ctx.font = 'bold 48px Roboto, sans-serif';
-    ctx.fillText('Game Over', GAME_WIDTH / 2, GAME_HEIGHT * 0.3);
+    ctx.font = 'bold 46px Roboto, sans-serif';
+    ctx.fillText('Game Over', GAME_WIDTH / 2, GAME_HEIGHT * 0.26);
 
     // Stats
     ctx.font = 'bold 26px Roboto, sans-serif';
     ctx.fillStyle = COLORS.text;
-    ctx.fillText(`SCORE: ${height}m`, GAME_WIDTH / 2, GAME_HEIGHT * 0.42);
-    ctx.fillText(`COINS: ${coins}`, GAME_WIDTH / 2, GAME_HEIGHT * 0.49);
+    ctx.fillText(`SCORE: ${height}m`, GAME_WIDTH / 2, GAME_HEIGHT * 0.36);
+    ctx.fillText(`COINS: ${coins}`, GAME_WIDTH / 2, GAME_HEIGHT * 0.42);
+
+    // Best score line with highlight
+    if (isNewBest) {
+      ctx.fillStyle = COLORS.coinText;
+      ctx.font = 'bold 22px Roboto, sans-serif';
+      ctx.fillText(`★ NEW BEST SCORE: ${bestScore}m! ★`, GAME_WIDTH / 2, GAME_HEIGHT * 0.49);
+    } else {
+      ctx.fillStyle = COLORS.text;
+      ctx.font = '500 20px Roboto, sans-serif';
+      ctx.fillText(`BEST SCORE: ${bestScore}m`, GAME_WIDTH / 2, GAME_HEIGHT * 0.49);
+    }
 
     // Restart button
     this.drawButton(ctx, 'restart');
+
+    // Hint
+    ctx.fillStyle = COLORS.text;
+    ctx.font = '400 14px Roboto, sans-serif';
+    ctx.fillText('Press Space / Enter or Tap to restart', GAME_WIDTH / 2, GAME_HEIGHT * 0.72);
 
     ctx.globalAlpha = 1;
   }

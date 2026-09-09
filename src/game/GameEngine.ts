@@ -51,6 +51,9 @@ export class GameEngine {
   private coinCount = 0;
   private highestY = 0; // track lowest world Y value (highest point)
   private bestScore = 0;
+  private isNewBest = false;
+
+  onStateChange: ((state: GameState) => void) | null = null;
 
   private static readonly BEST_SCORE_KEY = 'skyjumper_best_score';
 
@@ -86,6 +89,13 @@ export class GameEngine {
     this.ui.setPlayCallback(() => this.startGame());
     this.ui.setRestartCallback(() => this.startGame());
 
+    this.input.onAction = () => {
+      this.audio.resume();
+      if (this.state === STATE.MAIN_MENU || this.state === STATE.GAME_OVER) {
+        this.startGame();
+      }
+    };
+
     // Player bounce hook: dust + sound
     this.player.onBounce = () => {
       const sx = this.player.centerX;
@@ -106,8 +116,12 @@ export class GameEngine {
     this.boundPointerMove = (e: PointerEvent) => this.onPointerMove(e);
     this.boundPointerDown = (e: PointerEvent) => this.onPointerDown(e);
 
-    const stored = localStorage.getItem(GameEngine.BEST_SCORE_KEY);
-    this.bestScore = stored ? parseInt(stored, 10) || 0 : 0;
+    try {
+      const stored = localStorage.getItem(GameEngine.BEST_SCORE_KEY);
+      this.bestScore = stored ? parseInt(stored, 10) || 0 : 0;
+    } catch {
+      this.bestScore = 0;
+    }
   }
 
   // ---- Lifecycle ----
@@ -145,10 +159,14 @@ export class GameEngine {
     window.setTimeout(() => {
       this.state = newState;
       this.transitionTarget = 1;
+      if (this.onStateChange) {
+        this.onStateChange(newState);
+      }
     }, 200);
   }
 
   private resetGame(): void {
+    this.input.reset();
     this.player.reset(
       (GAME_WIDTH - PLAYER_WIDTH) / 2,
       GAME_HEIGHT - 200,
@@ -166,9 +184,15 @@ export class GameEngine {
 
   private gameOver(): void {
     this.audio.playGameOver();
-    if (this.height > this.bestScore) {
+    this.input.reset();
+    this.isNewBest = this.height > this.bestScore;
+    if (this.isNewBest) {
       this.bestScore = this.height;
-      localStorage.setItem(GameEngine.BEST_SCORE_KEY, String(this.bestScore));
+      try {
+        localStorage.setItem(GameEngine.BEST_SCORE_KEY, String(this.bestScore));
+      } catch {
+        // Ignore storage errors in sandboxed iframes
+      }
     }
     this.fadeTo(STATE.GAME_OVER);
   }
@@ -243,12 +267,13 @@ export class GameEngine {
       // For spring platforms, coin goes higher to avoid overlapping the spring
       const offset = platform.type === 'spring' ? 55 : 30;
       this.coins.push(
-        new Coin(platform.x + platform.width / 2, platform.y - offset),
+        new Coin(platform.x + platform.width / 2, platform.y - offset, platform),
       );
     }
   }
 
   private spawnPlatformsAbove(): void {
+    if (this.platforms.length === 0) return;
     const topScreenWorldY = this.camera.y - 100;
     let highest = this.platforms[0];
     for (const p of this.platforms) {
@@ -276,21 +301,24 @@ export class GameEngine {
 
   // ---- Collision ----
 
-  private checkCollisions(): void {
+  private checkCollisions(dt: number): void {
     // Only collide when falling
     if (this.player.vy < 0) return;
 
     const feet = this.player.feetY;
-    const prevFeet = feet - this.player.vy * (1 / 60);
+    // Real time-dependent previous position to prevent frame-drop tunneling
+    const prevFeet = feet - this.player.vy * dt;
     const px = this.player.x;
     const pw = this.player.width;
 
     for (const p of this.platforms) {
       if (!p.isSolid()) continue;
-      // Horizontal overlap
-      if (px + pw < p.x || px > p.x + p.width) continue;
-      // Feet crossing the platform top
-      if (feet >= p.y && prevFeet <= p.y + 4) {
+      // Horizontal overlap (with generous 4px forgiving margin)
+      if (px + pw < p.x - 2 || px > p.x + p.width + 2) continue;
+      // Feet crossing the platform top:
+      // prevFeet was above/at platform and feet reached or fell through during this step
+      const maxFallTolerance = Math.max(12, this.player.vy * dt + 6);
+      if (feet >= p.y && prevFeet <= p.y + maxFallTolerance && feet <= p.y + p.height + 24) {
         this.player.y = p.y - this.player.height;
 
         if (p.hasSpring()) {
@@ -364,7 +392,7 @@ export class GameEngine {
       for (const p of this.platforms) p.update(dt);
       for (const c of this.coins) c.update(dt);
 
-      this.checkCollisions();
+      this.checkCollisions(dt);
       this.spawnPlatformsAbove();
       this.cleanupOffscreen();
 
@@ -414,7 +442,14 @@ export class GameEngine {
     }
 
     if (this.state === STATE.GAME_OVER) {
-      this.ui.drawGameOver(this.ctx, this.transitionAlpha, this.height, this.coinCount);
+      this.ui.drawGameOver(
+        this.ctx,
+        this.transitionAlpha,
+        this.height,
+        this.coinCount,
+        this.bestScore,
+        this.isNewBest,
+      );
     }
   }
 

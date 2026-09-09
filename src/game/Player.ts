@@ -109,8 +109,19 @@ export class Player {
   }
 
   draw(ctx: CanvasRenderingContext2D, screenX: number, screenY: number): void {
+    this.drawPlayerAt(ctx, screenX, screenY);
+
+    // If partially off screen, draw duplicate on opposite edge for seamless wrapping
+    if (screenX < 0) {
+      this.drawPlayerAt(ctx, screenX + GAME_WIDTH, screenY);
+    } else if (screenX + this.width > GAME_WIDTH) {
+      this.drawPlayerAt(ctx, screenX - GAME_WIDTH, screenY);
+    }
+  }
+
+  private drawPlayerAt(ctx: CanvasRenderingContext2D, sx: number, sy: number): void {
     ctx.save();
-    ctx.translate(screenX + this.width / 2, screenY + this.height / 2);
+    ctx.translate(sx + this.width / 2, sy + this.height / 2);
     ctx.rotate(this.tilt);
     ctx.scale(this.scaleX, this.scaleY);
 

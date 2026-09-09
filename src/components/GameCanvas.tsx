@@ -24,7 +24,7 @@ function computeDesktop(): boolean {
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
-  const [isDesktop, setIsDesktop] = useState<boolean>(false);
+  const [isDesktop, setIsDesktop] = useState<boolean>(computeDesktop);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   useEffect(() => {
@@ -33,24 +33,21 @@ export default function GameCanvas() {
 
     const engine = new GameEngine(canvas);
     engineRef.current = engine;
-    engine.start();
 
-    let raf = 0;
-    const syncState = () => {
-      setIsPlaying(engine.getState() === STATE.PLAYING);
-      raf = requestAnimationFrame(syncState);
+    engine.onStateChange = (newState) => {
+      setIsPlaying(newState === STATE.PLAYING);
     };
-    raf = requestAnimationFrame(syncState);
+
+    engine.start();
+    window.focus();
 
     return () => {
-      cancelAnimationFrame(raf);
       engine.destroy();
       engineRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    setIsDesktop(computeDesktop());
     const onResize = () => setIsDesktop(computeDesktop());
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -139,11 +136,14 @@ export default function GameCanvas() {
           ref={canvasRef}
           width={GAME_WIDTH}
           height={GAME_HEIGHT}
+          tabIndex={0}
+          onClick={() => window.focus()}
           style={{
             display: 'block',
             width: '100%',
             height: '100%',
             touchAction: 'none',
+            outline: 'none',
           }}
         />
 

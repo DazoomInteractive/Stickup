@@ -9,6 +9,7 @@
 // ============================================================
 
 import { COIN_RADIUS, COLORS } from './constants';
+import type { Platform } from './Platform';
 
 export class Coin {
   x: number;
@@ -19,16 +20,27 @@ export class Coin {
   // Bob animation
   private bobPhase: number;
   private baseY: number;
+  platform: Platform | null = null;
+  private platformOffsetX = 0;
 
-  constructor(x: number, y: number) {
+  constructor(x: number, y: number, platform: Platform | null = null) {
     this.x = x;
     this.y = y;
     this.baseY = y;
     this.bobPhase = Math.random() * Math.PI * 2;
+    this.platform = platform;
+    if (platform) {
+      this.platformOffsetX = x - platform.x;
+    }
   }
 
   update(dt: number): void {
     this.bobPhase += dt * 3;
+    if (this.platform) {
+      this.x = this.platform.x + this.platformOffsetX;
+      const offset = this.platform.hasSpring() ? 55 : 30;
+      this.baseY = this.platform.y - offset;
+    }
     this.y = this.baseY + Math.sin(this.bobPhase) * 6;
   }
 

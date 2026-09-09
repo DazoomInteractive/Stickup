@@ -7,21 +7,34 @@
 export class InputHandler {
   private left = false;
   private right = false;
+  onAction: (() => void) | null = null;
 
   private keyDown = (e: KeyboardEvent): void => {
     switch (e.code) {
       case 'ArrowLeft':
       case 'KeyA':
         this.left = true;
+        e.preventDefault();
         break;
       case 'ArrowRight':
       case 'KeyD':
         this.right = true;
+        e.preventDefault();
+        break;
+      case 'ArrowUp':
+      case 'ArrowDown':
+        e.preventDefault();
+        break;
+      case 'Space':
+      case 'Enter':
+        if (this.onAction) {
+          this.onAction();
+        }
+        e.preventDefault();
         break;
       default:
         return;
     }
-    e.preventDefault();
   };
 
   private keyUp = (e: KeyboardEvent): void => {
@@ -29,15 +42,16 @@ export class InputHandler {
       case 'ArrowLeft':
       case 'KeyA':
         this.left = false;
+        e.preventDefault();
         break;
       case 'ArrowRight':
       case 'KeyD':
         this.right = false;
+        e.preventDefault();
         break;
       default:
         return;
     }
-    e.preventDefault();
   };
 
   attach(): void {

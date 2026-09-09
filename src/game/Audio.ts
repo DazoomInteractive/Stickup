@@ -31,6 +31,9 @@ export class AudioManager {
 
   toggleMute(): boolean {
     this.muted = !this.muted;
+    if (!this.muted) {
+      this.resume();
+    }
     return this.muted;
   }
 
