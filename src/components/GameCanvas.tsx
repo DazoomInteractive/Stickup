@@ -211,10 +211,10 @@ export default function GameCanvas() {
             gap: 0.8,
           }}
         >
-          <span style={{ color: '#60a5fa', fontWeight: 600 }}>[A / D]</span> yoki{' '}
-          <span style={{ color: '#60a5fa', fontWeight: 600 }}>[← / →]</span> Harakat
+          <span style={{ color: '#60a5fa', fontWeight: 600 }}>[A / D]</span> or{' '}
+          <span style={{ color: '#60a5fa', fontWeight: 600 }}>[← / →]</span> Move
           <span style={{ color: '#475569', margin: '0 4px' }}>•</span>
-          <span style={{ color: '#fbbf24', fontWeight: 600 }}>[P / ESC]</span> Pauza
+          <span style={{ color: '#fbbf24', fontWeight: 600 }}>[P / ESC]</span> Pause
         </Typography>
       </Box>
     </Box>

@@ -919,7 +919,7 @@ export class GameEngine {
     this.ctx.lineTo(GAME_WIDTH, screenY);
     this.ctx.stroke();
 
-    // 2. Center badge: "🏆 REKORD: 120m"
+    // 2. Center badge: "🏆 YOUR RECORD: 120m"
     this.ctx.setLineDash([]);
     const badgeW = 210;
     const badgeH = 28;
@@ -954,7 +954,7 @@ export class GameEngine {
     this.ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
     this.ctx.shadowBlur = 3;
     this.ctx.shadowOffsetY = 1;
-    this.ctx.fillText(`🏆 REKORDINGIZ: ${recordMeters}m`, GAME_WIDTH / 2, screenY);
+    this.ctx.fillText(`🏆 YOUR RECORD: ${recordMeters}m`, GAME_WIDTH / 2, screenY);
 
     this.ctx.restore();
   }
