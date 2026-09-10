@@ -90,8 +90,14 @@ export const COLORS = {
   overlay: 'rgba(255,255,255,0.55)',
 } as const;
 
+// Game metadata & Anti-Piracy Notice
+export const GAME_VERSION = 'v2.0.0';
+export const STUDIO_NAME = 'DazzomInteractive';
+export const COPYRIGHT_NOTICE = '© 2026 DazzomInteractive. All Rights Reserved.';
+
 // Game states
 export const STATE = {
+  SPLASH: 'SPLASH',
   MAIN_MENU: 'MAIN_MENU',
   PLAYING: 'PLAYING',
   PAUSED: 'PAUSED',

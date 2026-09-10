@@ -11,6 +11,9 @@ import {
   GAME_HEIGHT,
   COLORS,
   STATE,
+  GAME_VERSION,
+  STUDIO_NAME,
+  COPYRIGHT_NOTICE,
   type GameState,
 } from './constants';
 import type { Button } from './types';
@@ -261,8 +264,228 @@ export class UI {
 
   // ---- Drawing ----
 
+  /**
+   * High-contrast, cinematic Studio Intro (Заставка)
+   * Featuring DazzomInteractive emblem, game logo, and legal anti-piracy warning.
+   */
+  drawSplash(ctx: CanvasRenderingContext2D, alpha: number, elapsed: number): void {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+    // 1. Sleek dark studio gradient background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+    bgGrad.addColorStop(0, '#090d16');
+    bgGrad.addColorStop(0.5, '#0f172a');
+    bgGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Subtle background grid accent dots
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+    for (let x = 25; x < GAME_WIDTH; x += 40) {
+      for (let y = 30; y < GAME_HEIGHT; y += 40) {
+        ctx.fillRect(x, y, 2, 2);
+      }
+    }
+
+    // 2. Glowing Studio Emblem (DazzomInteractive Diamond Emblem)
+    const logoY = GAME_HEIGHT * 0.17;
+    ctx.save();
+    ctx.translate(GAME_WIDTH / 2, logoY);
+
+    // Outer glow aura
+    const auraGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 65);
+    auraGrad.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
+    auraGrad.addColorStop(0.7, 'rgba(99, 102, 241, 0.12)');
+    auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = auraGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 65, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hexagonal diamond emblem badge
+    ctx.shadowColor = 'rgba(56, 189, 248, 0.6)';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = '#0f172a';
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.5;
+
+    ctx.beginPath();
+    const r = 36;
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI / 6;
+      const hx = Math.cos(angle) * r;
+      const hy = Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(hx, hy);
+      else ctx.lineTo(hx, hy);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Stylized "D" gaming monogram
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = '900 28px Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('D', 0, 1);
+    ctx.restore();
+
+    // 3. Studio Branding text
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.shadowColor = 'rgba(56, 189, 248, 0.5)';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '900 22px Roboto, sans-serif';
+    ctx.fillText('DAZZOM INTERACTIVE', GAME_WIDTH / 2, GAME_HEIGHT * 0.26);
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 12px Roboto, sans-serif';
+    ctx.fillText('—  P R E S E N T S  —', GAME_WIDTH / 2, GAME_HEIGHT * 0.295);
+
+    // 4. Game Title + Version Pill
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = '900 34px Roboto, sans-serif';
+    ctx.fillText('SKY JUMPER', GAME_WIDTH / 2, GAME_HEIGHT * 0.36);
+
+    // Version pill badge
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    const badgeW = 92;
+    const badgeH = 22;
+    const badgeX = (GAME_WIDTH - badgeW) / 2;
+    const badgeY = GAME_HEIGHT * 0.395;
+
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 11);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#e0f2fe';
+    ctx.font = '900 12px Roboto, sans-serif';
+    ctx.fillText(`${GAME_VERSION} V`, GAME_WIDTH / 2, badgeY + badgeH / 2);
+
+    // 5. Anti-Piracy & Copyright Protection Shield Card
+    const cardW = 394;
+    const cardH = 205;
+    const cardX = (GAME_WIDTH - cardW) / 2;
+    const cardY = GAME_HEIGHT * 0.45;
+
+    // Card background & glowing border
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.42)';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    // Card Header: Shield + Official Release
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = '900 13px Roboto, sans-serif';
+    ctx.fillText('🛡️  OFFICIAL AUTHORIZED RELEASE', GAME_WIDTH / 2, cardY + 24);
+
+    // Divider line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cardX + 24, cardY + 40);
+    ctx.lineTo(cardX + cardW - 24, cardY + 40);
+    ctx.stroke();
+
+    // Creator & Copyright
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 13px Roboto, sans-serif';
+    ctx.fillText(`Creator: ${STUDIO_NAME}`, GAME_WIDTH / 2, cardY + 58);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '500 12px Roboto, sans-serif';
+    ctx.fillText(COPYRIGHT_NOTICE, GAME_WIDTH / 2, cardY + 78);
+
+    // Anti-piracy legal notice text (scannable, international IP protection)
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '400 11px Roboto, sans-serif';
+    const lines = [
+      'This software is protected by international copyright laws.',
+      'Unauthorized copying, reverse engineering, redistribution,',
+      'or re-uploading of this game/APK to Google Play Store,',
+      'App Store, Itch.io, or other distribution channels is strictly',
+      'prohibited and subject to immediate DMCA takedown actions.',
+    ];
+    let lineY = cardY + 104;
+    for (const line of lines) {
+      ctx.fillText(line, GAME_WIDTH / 2, lineY);
+      lineY += 16;
+    }
+
+    // 6. Progress bar (3.2 seconds duration)
+    const progW = 260;
+    const progH = 4;
+    const progX = (GAME_WIDTH - progW) / 2;
+    const progY = GAME_HEIGHT * 0.76;
+    const progress = Math.min(1, elapsed / 3.0);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.beginPath();
+    ctx.roundRect(progX, progY, progW, progH, 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.shadowColor = 'rgba(56, 189, 248, 0.8)';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.roundRect(progX, progY, progW * progress, progH, 2);
+    ctx.fill();
+
+    // 7. Interactive Tap to Continue Prompt (pulsing alpha)
+    ctx.shadowBlur = 0;
+    const pulseAlpha = 0.5 + 0.5 * Math.sin(elapsed * 4);
+    ctx.globalAlpha = alpha * pulseAlpha;
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 13px Roboto, sans-serif';
+    ctx.fillText('TAP ANYWHERE TO CONTINUE ▶', GAME_WIDTH / 2, GAME_HEIGHT * 0.82);
+
+    ctx.restore();
+  }
+
   drawMainMenu(ctx: CanvasRenderingContext2D, alpha: number, muted: boolean, bestScore: number): void {
     ctx.globalAlpha = alpha;
+
+    // Top Version badge (2.0.0 V) with solid dark background
+    const verBadgeW = 82;
+    const verBadgeH = 26;
+    const verBadgeX = 16;
+    const verBadgeY = 16;
+
+    ctx.save();
+    ctx.fillStyle = '#0f172a';
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(verBadgeX, verBadgeY, verBadgeW, verBadgeH, 13);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = '900 12px Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${GAME_VERSION.replace('v', '')} V`, verBadgeX + verBadgeW / 2, verBadgeY + verBadgeH / 2);
+    ctx.restore();
 
     // Cartoon logo: stickman bouncing on a green platform
     this.drawLogo(ctx, GAME_WIDTH / 2, GAME_HEIGHT * 0.16);
@@ -270,26 +493,94 @@ export class UI {
     // Title — 3D layered sky-blue with white outline
     this.drawTitle(ctx, 'Sky Jumper', GAME_WIDTH / 2, GAME_HEIGHT * 0.30);
 
-    // Best score badge (just below the title)
-    ctx.fillStyle = COLORS.coinText;
-    ctx.font = 'bold 20px Roboto, sans-serif';
+    // Best score badge in a clean dark pill container (immune to clouds)
+    const scorePillW = 210;
+    const scorePillH = 36;
+    const scorePillX = (GAME_WIDTH - scorePillW) / 2;
+    const scorePillY = GAME_HEIGHT * 0.37;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(scorePillX, scorePillY, scorePillW, scorePillH, 18);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 16px Roboto, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`Best Score: ${bestScore}m`, GAME_WIDTH / 2, GAME_HEIGHT * 0.37);
+    ctx.fillText(`🏆 Best Score: ${bestScore}m`, GAME_WIDTH / 2, scorePillY + scorePillH / 2);
+    ctx.restore();
 
-    // Subtitle
-    ctx.fillStyle = COLORS.textLight;
-    ctx.font = '400 18px Roboto, sans-serif';
-    ctx.fillText('How high can you climb?', GAME_WIDTH / 2, GAME_HEIGHT * 0.42);
+    // Subtitle — High contrast dark navy with white rim (crisp over sky and clouds)
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 17px Roboto, sans-serif';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3.5;
+    ctx.strokeText('How high can you climb?', GAME_WIDTH / 2, GAME_HEIGHT * 0.445);
+    ctx.fillStyle = '#0f243c';
+    ctx.fillText('How high can you climb?', GAME_WIDTH / 2, GAME_HEIGHT * 0.445);
+    ctx.restore();
 
     // Play button
     this.drawButton(ctx, 'play');
 
-    // Controls hint
-    ctx.fillStyle = COLORS.textLight;
-    ctx.font = '400 14px Roboto, sans-serif';
-    ctx.fillText('← → or A / D to move', GAME_WIDTH / 2, GAME_HEIGHT * 0.70);
-    ctx.fillText('Space / Enter or Tap to jump into action', GAME_WIDTH / 2, GAME_HEIGHT * 0.74);
+    // Controls hint in high-contrast dark card (never blends with white clouds)
+    const ctrlW = 348;
+    const ctrlH = 58;
+    const ctrlX = (GAME_WIDTH - ctrlW) / 2;
+    const ctrlY = GAME_HEIGHT * 0.675;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(ctrlX, ctrlY, ctrlW, ctrlH, 14);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 13px Roboto, sans-serif';
+    ctx.fillText('🎮 CONTROLS: ← → or A / D to move', GAME_WIDTH / 2, ctrlY + 19);
+
+    ctx.fillStyle = '#93c5fd';
+    ctx.font = '500 12px Roboto, sans-serif';
+    ctx.fillText('Space / Enter or Tap to jump into action', GAME_WIDTH / 2, ctrlY + 40);
+    ctx.restore();
+
+    // Bottom Anti-Piracy Copyright in clean dark pill (fully readable)
+    const footW = 310;
+    const footH = 34;
+    const footX = (GAME_WIDTH - footW) / 2;
+    const footY = GAME_HEIGHT * 0.88;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(footX, footY, footW, footH, 17);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 11px Roboto, sans-serif';
+    ctx.fillText('© 2026 DazzomInteractive · All Rights Reserved', GAME_WIDTH / 2, footY + 12);
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 10px Roboto, sans-serif';
+    ctx.fillText('Protected Original IP · Official Release', GAME_WIDTH / 2, footY + 23);
+    ctx.restore();
 
     // Mute button + tooltip
     this.drawMuteButton(ctx, muted);
@@ -317,25 +608,36 @@ export class UI {
     ctx.shadowBlur = 4;
     ctx.shadowOffsetY = 1.5;
 
-    // 1. Current SCORE on top-left
+    // 1. Current SCORE on top-left (with dark pill backing so white clouds never obscure it)
+    const scorePillW = isBest ? 195 : (bestScore > 0 ? 215 : 135);
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(10, 10, scorePillW, 32, 16);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 19px Roboto, sans-serif';
-    ctx.fillText(`SCORE: ${height}m`, 16, 26);
+    ctx.font = '900 18px Roboto, sans-serif';
+    ctx.fillText(`SCORE: ${height}m`, 20, 26);
 
     // If currently beating previous record, highlight with glowing star badge
     if (isBest && height > 0) {
       const scoreWidth = ctx.measureText(`SCORE: ${height}m`).width;
       ctx.fillStyle = '#fde047'; // Bright gold
-      ctx.font = '900 13px Roboto, sans-serif';
-      ctx.fillText('★ BEST', 24 + scoreWidth, 26);
+      ctx.font = '900 12px Roboto, sans-serif';
+      ctx.fillText('★ BEST', 26 + scoreWidth, 26);
     } else if (bestScore > 0) {
       // 2. Persistent BEST RECORD target in subtle gold
       const scoreWidth = ctx.measureText(`SCORE: ${height}m`).width;
       ctx.fillStyle = '#fef08a';
-      ctx.font = 'bold 13px Roboto, sans-serif';
-      ctx.fillText(`(BEST: ${bestScore}m)`, 24 + scoreWidth, 26);
+      ctx.font = 'bold 12px Roboto, sans-serif';
+      ctx.fillText(`(BEST: ${bestScore}m)`, 26 + scoreWidth, 26);
     }
 
     // 3. Power-Up indicators stacked cleanly on top-left
@@ -370,11 +672,26 @@ export class UI {
     ctx.shadowBlur = 4;
     ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
 
-    // 4. COIN on top-right (to the left of pause button)
-    ctx.textAlign = 'right';
+    // 4. COIN on top-right (with dark pill backing)
+    const coinText = `🪙 ${coins}`;
+    ctx.font = '900 17px Roboto, sans-serif';
+    const coinMeasure = ctx.measureText(coinText).width;
+    const coinPillW = Math.max(76, coinMeasure + 22);
+    const coinPillX = GAME_WIDTH - 56 - coinPillW;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(coinPillX, 10, coinPillW, 32, 16);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.textAlign = 'center';
     ctx.fillStyle = '#fef08a';
-    ctx.font = '900 18px Roboto, sans-serif';
-    ctx.fillText(`🪙 ${coins}`, GAME_WIDTH - 60, 26);
+    ctx.fillText(coinText, coinPillX + coinPillW / 2, 26);
 
     ctx.restore();
 

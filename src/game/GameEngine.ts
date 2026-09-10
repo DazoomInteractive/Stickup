@@ -55,7 +55,8 @@ export class GameEngine {
   private ui: UI;
   private audio: AudioManager;
 
-  private state: GameState = STATE.MAIN_MENU;
+  private state: GameState = STATE.SPLASH;
+  private splashElapsed = 0;
   private height = 0;
   private coinCount = 0;
   private highestY = 0; // track lowest world Y value (highest point)
@@ -142,7 +143,10 @@ export class GameEngine {
 
     this.input.onAction = () => {
       this.audio.resume();
-      if (this.state === STATE.MAIN_MENU || this.state === STATE.GAME_OVER) {
+      if (this.state === STATE.SPLASH) {
+        this.audio.playButton();
+        this.goToMainMenu();
+      } else if (this.state === STATE.MAIN_MENU || this.state === STATE.GAME_OVER) {
         this.startGame();
       }
     };
@@ -590,6 +594,14 @@ export class GameEngine {
 
     this.ui.update(dt);
 
+    if (this.state === STATE.SPLASH) {
+      this.splashElapsed += dt;
+      if (this.splashElapsed >= 3.2) {
+        this.goToMainMenu();
+      }
+      return;
+    }
+
     if (this.state === STATE.PLAYING) {
       this.player.update(dt, this.input);
 
@@ -706,6 +718,11 @@ export class GameEngine {
   // ---- Rendering ----
 
   private render(): void {
+    if (this.state === STATE.SPLASH) {
+      this.ui.drawSplash(this.ctx, this.transitionAlpha, this.splashElapsed);
+      return;
+    }
+
     this.drawBackground();
 
     if (this.state === STATE.MAIN_MENU) {
@@ -979,6 +996,14 @@ export class GameEngine {
 
   private onPointerDown(e: PointerEvent): void {
     this.audio.resume();
+
+    // Tap to skip splash screen
+    if (this.state === STATE.SPLASH) {
+      this.audio.playButton();
+      this.goToMainMenu();
+      return;
+    }
+
     const pos = this.getPointerPos(e);
     // Mute button check on main menu
     if (this.state === STATE.MAIN_MENU) {
