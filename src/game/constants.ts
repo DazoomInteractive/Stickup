@@ -37,6 +37,15 @@ export const SPRING_SPAWN_CHANCE = 0.18; // chance a platform gets a spring on t
 export const SPRING_BOOST_MULTIPLIER = 2.0; // spring launches player 2x higher
 export const COIN_SPAWN_CHANCE = 0.45; // chance a platform gets a coin above it
 
+// Power-up balance constants
+export const SHIELD_SPAWN_CHANCE = 0.055; // 5.5% spawn rate for Shield
+export const JETPACK_SPAWN_CHANCE = 0.035; // 3.5% spawn rate for Jetpack (rare & rewarding)
+export const JETPACK_DURATION = 3.8;       // 3.8 seconds of thruster flight
+export const JETPACK_SPEED = 1450;         // upward flight speed px/s
+export const MAGNET_SPAWN_CHANCE = 0.045;  // 4.5% spawn rate for Magnet
+export const MAGNET_DURATION = 6.5;        // 6.5 seconds of coin attraction
+export const MAGNET_RADIUS = 190;          // coin attraction radius px
+
 // Camera
 export const CAMERA_OFFSET = 250;     // player stays this many px from bottom
 
@@ -85,6 +94,7 @@ export const COLORS = {
 export const STATE = {
   MAIN_MENU: 'MAIN_MENU',
   PLAYING: 'PLAYING',
+  PAUSED: 'PAUSED',
   GAME_OVER: 'GAME_OVER',
 } as const;
 

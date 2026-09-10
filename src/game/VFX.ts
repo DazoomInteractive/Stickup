@@ -75,6 +75,121 @@ export class VFX {
     }
   }
 
+  /** Fiery ember floating up from the rising lava. */
+  spawnLavaEmber(x: number, y: number): void {
+    if (this.particles.length > 90) return; // budget limit
+    const colors = ['#fde047', '#fb923c', '#ef4444'];
+    this.particles.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 50,
+      vy: -(60 + Math.random() * 80),
+      life: 0.6 + Math.random() * 0.4,
+      maxLife: 1.0,
+      size: 2 + Math.random() * 3.5,
+      type: 'ember',
+      color: colors[Math.floor(Math.random() * colors.length)],
+    });
+  }
+
+  /** Shimmering cyan burst when shield is picked up or broken. */
+  spawnShieldBurst(x: number, y: number, isBreak = false): void {
+    const count = isBreak ? 14 : 9;
+    const colors = ['#38bdf8', '#7dd3fc', '#bae6fd', '#0284c7'];
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+      const speed = isBreak ? 120 + Math.random() * 100 : 70 + Math.random() * 60;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: isBreak ? 0.6 : 0.45,
+        maxLife: isBreak ? 0.6 : 0.45,
+        size: isBreak ? 3 + Math.random() * 4 : 2 + Math.random() * 3,
+        type: 'shield',
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  }
+
+  /** Fiery thruster exhaust particles streaming downward from Jetpack. */
+  spawnJetpackThruster(x: number, y: number): void {
+    if (this.particles.length > 120) return;
+    const colors = ['#fbbf24', '#f97316', '#ef4444', '#fed7aa', '#94a3b8'];
+    for (let i = 0; i < 2; i++) {
+      this.particles.push({
+        x: x + (Math.random() - 0.5) * 12,
+        y,
+        vx: (Math.random() - 0.5) * 45,
+        vy: 180 + Math.random() * 140, // thrust pushes downward
+        life: 0.25 + Math.random() * 0.15,
+        maxLife: 0.4,
+        size: 3 + Math.random() * 4,
+        type: 'jetpack',
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  }
+
+  /** Pickup burst for Jetpack. */
+  spawnJetpackBurst(x: number, y: number): void {
+    const count = 12;
+    const colors = ['#f97316', '#fbbf24', '#ef4444', '#fef08a'];
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count;
+      const speed = 90 + Math.random() * 70;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.5,
+        maxLife: 0.5,
+        size: 3 + Math.random() * 3,
+        type: 'jetpack',
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  }
+
+  /** Pickup burst for Magnet. */
+  spawnMagnetBurst(x: number, y: number): void {
+    const count = 12;
+    const colors = ['#a855f7', '#c084fc', '#e879f9', '#38bdf8'];
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count;
+      const speed = 80 + Math.random() * 60;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.45,
+        maxLife: 0.45,
+        size: 2.5 + Math.random() * 3,
+        type: 'magnet',
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  }
+
+  /** Tiny magnetic sparkle when attracting a coin. */
+  spawnMagnetSpark(x: number, y: number): void {
+    if (this.particles.length > 110) return;
+    this.particles.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 30,
+      vy: (Math.random() - 0.5) * 30,
+      life: 0.22,
+      maxLife: 0.22,
+      size: 2 + Math.random() * 2,
+      type: 'magnet',
+      color: '#c084fc',
+    });
+  }
+
   /** Floating "+1" text that rises and fades. */
   spawnFloatingText(x: number, y: number, text: string, color: string): void {
     this.texts.push({
@@ -93,10 +208,13 @@ export class VFX {
       const alpha = p.life / p.maxLife;
       ctx.globalAlpha = alpha;
       ctx.fillStyle = p.color;
-      if (p.type === 'sparkle') {
-        // Draw a small star-ish shape
+      if (p.type === 'sparkle' || p.type === 'shield' || p.type === 'magnet') {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.type === 'ember' || p.type === 'jetpack') {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * (0.4 + 0.6 * alpha), 0, Math.PI * 2);
         ctx.fill();
       } else {
         ctx.beginPath();

@@ -8,6 +8,7 @@ export class InputHandler {
   private left = false;
   private right = false;
   onAction: (() => void) | null = null;
+  onPauseToggle: (() => void) | null = null;
 
   private keyDown = (e: KeyboardEvent): void => {
     switch (e.code) {
@@ -23,6 +24,13 @@ export class InputHandler {
         break;
       case 'ArrowUp':
       case 'ArrowDown':
+        e.preventDefault();
+        break;
+      case 'Escape':
+      case 'KeyP':
+        if (this.onPauseToggle) {
+          this.onPauseToggle();
+        }
         e.preventDefault();
         break;
       case 'Space':

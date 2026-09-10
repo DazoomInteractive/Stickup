@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { GameEngine } from '../game/GameEngine';
 import { GAME_WIDTH, GAME_HEIGHT, STATE } from '../game/constants';
 
-function isTouchDevice(): boolean {
+function checkTouchDevice(): boolean {
+  if (typeof window === 'undefined') return false;
   return (
     'ontouchstart' in window ||
     (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
@@ -11,20 +12,10 @@ function isTouchDevice(): boolean {
   );
 }
 
-function isWideScreen(): boolean {
-  return window.matchMedia
-    ? window.matchMedia('(min-width: 1024px)').matches
-    : window.innerWidth >= 1024;
-}
-
-function computeDesktop(): boolean {
-  return isWideScreen() && !isTouchDevice();
-}
-
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
-  const [isDesktop, setIsDesktop] = useState<boolean>(computeDesktop);
+  const [isTouch, setIsTouch] = useState<boolean>(checkTouchDevice);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   useEffect(() => {
@@ -48,9 +39,9 @@ export default function GameCanvas() {
   }, []);
 
   useEffect(() => {
-    const onResize = () => setIsDesktop(computeDesktop());
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    const updateDevice = () => setIsTouch(checkTouchDevice());
+    window.addEventListener('resize', updateDevice);
+    return () => window.removeEventListener('resize', updateDevice);
   }, []);
 
   const handleTouchStart = (side: 'left' | 'right') => (e: React.TouchEvent) => {
@@ -75,37 +66,33 @@ export default function GameCanvas() {
     else engineRef.current?.setTouchRight(false);
   };
 
-  const btnSx = (side: 'left' | 'right') => {
-    const base = {
-      position: 'absolute' as const,
-      bottom: 80,
-      [side]: 16,
-      zIndex: 100,
-      width: 94,
-      height: 94,
-      borderRadius: '50%',
-      border: '2px solid rgba(255,255,255,0.8)',
-      background: 'rgba(59,130,246,0.5)',
-      color: '#FFFFFF',
-      fontSize: 40,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: 'pointer',
-      userSelect: 'none',
-      touchAction: 'none',
-      backdropFilter: 'blur(4px)',
-      transition: 'transform 0.08s ease, background 0.08s ease',
-      '&:active': {
-        transform: 'scale(0.92)',
-        background: 'rgba(59,130,246,0.9)',
-      },
-    };
-    if (isDesktop) {
-      return { ...base, width: 150, height: 150, fontSize: 68, bottom: 48, [side]: 28 };
-    }
-    return base;
-  };
+  const btnSx = (side: 'left' | 'right') => ({
+    position: 'absolute' as const,
+    bottom: { xs: 72, sm: 84 },
+    [side]: { xs: 18, sm: 26 },
+    zIndex: 100,
+    width: { xs: 88, sm: 98 },
+    height: { xs: 88, sm: 98 },
+    borderRadius: '50%',
+    border: '2.5px solid rgba(255, 255, 255, 0.75)',
+    background: 'rgba(37, 99, 235, 0.42)',
+    color: '#FFFFFF',
+    fontSize: { xs: 38, sm: 44 },
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    userSelect: 'none',
+    touchAction: 'none',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
+    boxShadow: '0 8px 26px rgba(0, 0, 0, 0.28)',
+    transition: 'transform 0.08s ease, background 0.08s ease',
+    '&:active': {
+      transform: 'scale(0.90)',
+      background: 'rgba(29, 78, 216, 0.85)',
+    },
+  });
 
   return (
     <Box
@@ -114,22 +101,38 @@ export default function GameCanvas() {
         width: '100%',
         height: '100dvh',
         display: 'flex',
+        flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        bgcolor: '#e0e6ee',
+        // On mobile: seamlessly match the sky blue. On PC/Itch: stylish dark gaming backdrop
+        background: {
+          xs: 'linear-gradient(180deg, #a3d4f5 0%, #6bb6e8 55%, #2e7bc7 100%)',
+          md: 'radial-gradient(ellipse at center, #1e293b 0%, #0f172a 65%, #020617 100%)',
+        },
+        backgroundColor: { xs: '#6bb6e8', md: '#0f172a' },
         overflow: 'hidden',
+        p: { xs: 0, md: 2 },
       }}
     >
+      {/* Game Window Container */}
       <Box
         sx={{
           position: 'relative',
           aspectRatio: '9 / 16',
-          height: '100%',
-          maxHeight: '100dvh',
-          maxWidth: '100vw',
-          boxShadow: 3,
-          borderRadius: { xs: 0, sm: 2 },
+          height: { xs: '100%', md: 'auto' },
+          maxHeight: { xs: '100dvh', md: 'min(94dvh, 880px)' },
+          width: { xs: 'auto', md: 'auto' },
+          maxWidth: { xs: '100vw', md: '500px' },
+          boxShadow: {
+            xs: 'none',
+            md: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 40px rgba(59, 130, 246, 0.25)',
+          },
+          borderRadius: { xs: 0, md: '20px' },
+          border: { xs: 'none', md: '2px solid rgba(255, 255, 255, 0.14)' },
           overflow: 'hidden',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
         <canvas
@@ -142,41 +145,77 @@ export default function GameCanvas() {
             display: 'block',
             width: '100%',
             height: '100%',
+            objectFit: 'contain',
             touchAction: 'none',
             outline: 'none',
           }}
         />
 
-        {/* On-screen controls — visible only while playing */}
-        {isPlaying && (
-          <Box
-            component="button"
-            onTouchStart={handleTouchStart('left')}
-            onTouchEnd={handleTouchEnd('left')}
-            onTouchCancel={handleTouchEnd('left')}
-            onMouseDown={handleMouseDown('left')}
-            onMouseUp={handleMouseUp('left')}
-            onMouseLeave={handleMouseUp('left')}
-            sx={btnSx('left')}
-          >
-            {'\u25C0'}
-          </Box>
-        )}
+        {/* Touch controls — shown on mobile or touch-enabled devices during gameplay */}
+        {isPlaying && (isTouch || typeof window !== 'undefined') && (
+          <>
+            <Box
+              component="button"
+              onTouchStart={handleTouchStart('left')}
+              onTouchEnd={handleTouchEnd('left')}
+              onTouchCancel={handleTouchEnd('left')}
+              onMouseDown={handleMouseDown('left')}
+              onMouseUp={handleMouseUp('left')}
+              onMouseLeave={handleMouseUp('left')}
+              aria-label="Move Left"
+              sx={btnSx('left')}
+            >
+              {'\u25C0'}
+            </Box>
 
-        {isPlaying && (
-          <Box
-            component="button"
-            onTouchStart={handleTouchStart('right')}
-            onTouchEnd={handleTouchEnd('right')}
-            onTouchCancel={handleTouchEnd('right')}
-            onMouseDown={handleMouseDown('right')}
-            onMouseUp={handleMouseUp('right')}
-            onMouseLeave={handleMouseUp('right')}
-            sx={btnSx('right')}
-          >
-            {'\u25B6'}
-          </Box>
+            <Box
+              component="button"
+              onTouchStart={handleTouchStart('right')}
+              onTouchEnd={handleTouchEnd('right')}
+              onTouchCancel={handleTouchEnd('right')}
+              onMouseDown={handleMouseDown('right')}
+              onMouseUp={handleMouseUp('right')}
+              onMouseLeave={handleMouseUp('right')}
+              aria-label="Move Right"
+              sx={btnSx('right')}
+            >
+              {'\u25B6'}
+            </Box>
+          </>
         )}
+      </Box>
+
+      {/* PC / Itch.io Keyboard hint bar */}
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'flex' },
+          alignItems: 'center',
+          gap: 1.5,
+          mt: 1.5,
+          px: 2.5,
+          py: 0.75,
+          borderRadius: '9999px',
+          bgcolor: 'rgba(30, 41, 59, 0.85)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            color: '#94a3b8',
+            fontSize: '0.82rem',
+            letterSpacing: '0.02em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.8,
+          }}
+        >
+          <span style={{ color: '#60a5fa', fontWeight: 600 }}>[A / D]</span> yoki{' '}
+          <span style={{ color: '#60a5fa', fontWeight: 600 }}>[← / →]</span> Harakat
+          <span style={{ color: '#475569', margin: '0 4px' }}>•</span>
+          <span style={{ color: '#fbbf24', fontWeight: 600 }}>[P / ESC]</span> Pauza
+        </Typography>
       </Box>
     </Box>
   );

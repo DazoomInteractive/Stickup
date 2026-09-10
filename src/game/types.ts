@@ -20,7 +20,7 @@ export interface Button {
   onClick: () => void;
 }
 
-export type ParticleType = 'dust' | 'sparkle';
+export type ParticleType = 'dust' | 'sparkle' | 'ember' | 'shield' | 'jetpack' | 'magnet';
 
 export interface Particle {
   x: number;

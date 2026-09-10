@@ -17,6 +17,9 @@ import {
   PLAYER_HEIGHT,
   GAME_WIDTH,
   COLORS,
+  JETPACK_DURATION,
+  JETPACK_SPEED,
+  MAGNET_DURATION,
 } from './constants';
 import type { InputHandler } from './InputHandler';
 
@@ -33,13 +36,28 @@ export class Player {
   private scaleY = 1;
   private targetScaleX = 1;
   private targetScaleY = 1;
+  private squashPhase = 0; // 0 = idle, 1 = squashing on impact, 2 = stretching on launch
+  private squashTimer = 0;
   private tilt = 0;
   private targetTilt = 0;
 
-  // Bounce callback — GameEngine wires this to VFX.spawnDust + audio.
+  // Power-up states
+  hasShield = false;
+  private shieldTimer = 0;
+
+  hasJetpack = false;
+  jetpackTimer = 0;
+  jetpackMax = JETPACK_DURATION;
+  private thrusterAnim = 0;
+
+  hasMagnet = false;
+  magnetTimer = 0;
+  magnetMax = MAGNET_DURATION;
+
+  // Callbacks
   onBounce: (() => void) | null = null;
-  // Spring callback — GameEngine wires this to VFX + spring sound.
   onSpring: (() => void) | null = null;
+  onJetpackEnd: (() => void) | null = null;
 
   constructor(x: number, y: number) {
     this.x = x;
@@ -58,8 +76,22 @@ export class Player {
     return this.y + this.height;
   }
 
+  get bottomY(): number {
+    return this.y + this.height;
+  }
+
+  activateJetpack(): void {
+    this.hasJetpack = true;
+    this.jetpackTimer = JETPACK_DURATION;
+  }
+
+  activateMagnet(): void {
+    this.hasMagnet = true;
+    this.magnetTimer = MAGNET_DURATION;
+  }
+
   update(dt: number, input: InputHandler): void {
-    // Horizontal movement
+    // Horizontal movement (active in all modes including jetpack)
     let dir = 0;
     if (input.isLeft()) dir -= 1;
     if (input.isRight()) dir += 1;
@@ -73,39 +105,98 @@ export class Player {
       this.x = -this.width;
     }
 
-    // Gravity
-    this.vy += GRAVITY * dt;
-    if (this.vy > MAX_FALL_SPEED) this.vy = MAX_FALL_SPEED;
-    this.y += this.vy * dt;
+    // Vertical Physics: Jetpack vs Gravity
+    if (this.hasJetpack) {
+      this.jetpackTimer -= dt;
+      this.thrusterAnim += dt * 30;
+
+      // Rocket ascent velocity
+      this.vy = -JETPACK_SPEED;
+      this.y += this.vy * dt;
+
+      // Jetpack timer expiration: soft landing momentum
+      if (this.jetpackTimer <= 0) {
+        this.hasJetpack = false;
+        this.vy = -750; // soft floaty upward release
+        if (this.onJetpackEnd) this.onJetpackEnd();
+      }
+    } else {
+      // Normal Gravity
+      this.vy += GRAVITY * dt;
+      if (this.vy > MAX_FALL_SPEED) this.vy = MAX_FALL_SPEED;
+      this.y += this.vy * dt;
+    }
+
+    // Magnet timer
+    if (this.hasMagnet) {
+      this.magnetTimer -= dt;
+      if (this.magnetTimer <= 0) {
+        this.hasMagnet = false;
+      }
+    }
 
     // Tilt based on horizontal direction (smooth lerp)
     this.targetTilt = dir * 0.18;
     this.tilt += (this.targetTilt - this.tilt) * Math.min(1, dt * 10);
 
-    // Squish/stretch ease back toward 1
-    this.scaleX += (this.targetScaleX - this.scaleX) * Math.min(1, dt * 12);
-    this.scaleY += (this.targetScaleY - this.scaleY) * Math.min(1, dt * 12);
+    // Multi-phase Squash & Stretch animation (only when jumping, not during jetpack)
+    if (!this.hasJetpack) {
+      if (this.squashPhase === 1) {
+        this.squashTimer -= dt;
+        if (this.squashTimer <= 0) {
+          this.squashPhase = 2;
+          this.squashTimer = 0.15;
+          this.scaleX = 0.72;
+          this.scaleY = 1.38;
+          this.targetScaleX = 1;
+          this.targetScaleY = 1;
+        }
+      } else if (this.squashPhase === 2) {
+        this.squashTimer -= dt;
+        if (this.squashTimer <= 0) {
+          this.squashPhase = 0;
+        }
+      }
+    } else {
+      // Aerodynamic stretch while jetpack is firing
+      this.scaleX = 0.88;
+      this.scaleY = 1.18;
+      this.targetScaleX = 0.88;
+      this.targetScaleY = 1.18;
+    }
+
+    // Smooth lerp back toward target scale
+    const lerpSpeed = this.squashPhase === 1 ? 26 : 14;
+    this.scaleX += (this.targetScaleX - this.scaleX) * Math.min(1, dt * lerpSpeed);
+    this.scaleY += (this.targetScaleY - this.scaleY) * Math.min(1, dt * lerpSpeed);
+
+    if (this.hasShield) {
+      this.shieldTimer += dt * 3.5;
+    }
   }
 
   /** Called by GameEngine when the player lands on a platform. */
   bounce(): void {
     this.vy = JUMP_VELOCITY;
-    this.triggerSquish();
+    this.triggerSquish(false);
     if (this.onBounce) this.onBounce();
   }
 
   /** Called by GameEngine when the player hits a spring. */
   springBoost(): void {
     this.vy = SPRING_VELOCITY;
-    this.triggerSquish();
+    this.triggerSquish(true);
     if (this.onSpring) this.onSpring();
   }
 
-  private triggerSquish(): void {
-    this.scaleX = 0.7;
-    this.scaleY = 1.35;
-    this.targetScaleX = 1;
-    this.targetScaleY = 1;
+  private triggerSquish(isSpring = false): void {
+    this.squashPhase = 1;
+    this.squashTimer = isSpring ? 0.08 : 0.06;
+    // Initial squash on impact (compressed down, expanded out)
+    this.scaleX = isSpring ? 1.48 : 1.32;
+    this.scaleY = isSpring ? 0.56 : 0.70;
+    this.targetScaleX = isSpring ? 0.65 : 0.72;
+    this.targetScaleY = isSpring ? 1.48 : 1.38;
   }
 
   draw(ctx: CanvasRenderingContext2D, screenX: number, screenY: number): void {
@@ -121,11 +212,156 @@ export class Player {
 
   private drawPlayerAt(ctx: CanvasRenderingContext2D, sx: number, sy: number): void {
     ctx.save();
-    ctx.translate(sx + this.width / 2, sy + this.height / 2);
+    // Anchor squash at feet so player stays grounded during contact
+    const feetY = sy + this.height;
+    ctx.translate(sx + this.width / 2, feetY - (this.height / 2) * this.scaleY);
     ctx.rotate(this.tilt);
     ctx.scale(this.scaleX, this.scaleY);
 
+    if (this.hasJetpack) {
+      this.drawJetpack(ctx);
+    }
+
     this.drawStickman(ctx);
+
+    if (this.hasMagnet) {
+      this.drawMagnetArcs(ctx);
+    }
+
+    if (this.hasShield) {
+      this.drawShieldAura(ctx);
+    }
+
+    ctx.restore();
+  }
+
+  /** Twin rocket canisters on the player's back with thruster flames */
+  private drawJetpack(ctx: CanvasRenderingContext2D): void {
+    const w = this.width;
+    const h = this.height;
+
+    ctx.save();
+    // Harness across torso
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(-w * 0.32, -h * 0.1, w * 0.64, 4);
+
+    // Left and Right canisters
+    const canW = 7;
+    const canH = 22;
+    const canY = -h * 0.22;
+    const leftX = -w * 0.45;
+    const rightX = w * 0.45 - canW;
+
+    // Body of rockets
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(leftX, canY + 4, canW, canH - 4);
+    ctx.fillRect(rightX, canY + 4, canW, canH - 4);
+
+    // Cones
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(leftX, canY + 4);
+    ctx.lineTo(leftX + canW / 2, canY - 2);
+    ctx.lineTo(leftX + canW, canY + 4);
+    ctx.moveTo(rightX, canY + 4);
+    ctx.lineTo(rightX + canW / 2, canY - 2);
+    ctx.lineTo(rightX + canW, canY + 4);
+    ctx.fill();
+
+    // Warning stripe
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(leftX, canY + canH * 0.4, canW, 2.5);
+    ctx.fillRect(rightX, canY + canH * 0.4, canW, 2.5);
+
+    // Nozzles
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(leftX, canY + canH, canW, 3);
+    ctx.fillRect(rightX, canY + canH, canW, 3);
+
+    // Animated Thruster exhaust flames (flicker in last 0.6s as fuel warning)
+    const isWarning = this.jetpackTimer < 0.6;
+    const flicker = isWarning ? Math.sin(this.thrusterAnim * 2) > -0.2 : true;
+
+    if (flicker) {
+      const flameLen = 14 + Math.sin(this.thrusterAnim) * 5;
+
+      // Outer orange flame
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.moveTo(leftX, canY + canH + 3);
+      ctx.lineTo(leftX + canW, canY + canH + 3);
+      ctx.lineTo(leftX + canW / 2, canY + canH + 3 + flameLen);
+      ctx.moveTo(rightX, canY + canH + 3);
+      ctx.lineTo(rightX + canW, canY + canH + 3);
+      ctx.lineTo(rightX + canW / 2, canY + canH + 3 + flameLen);
+      ctx.fill();
+
+      // Inner hot yellow core
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.moveTo(leftX + 1.5, canY + canH + 3);
+      ctx.lineTo(leftX + canW - 1.5, canY + canH + 3);
+      ctx.lineTo(leftX + canW / 2, canY + canH + 3 + flameLen * 0.6);
+      ctx.moveTo(rightX + 1.5, canY + canH + 3);
+      ctx.lineTo(rightX + canW - 1.5, canY + canH + 3);
+      ctx.lineTo(rightX + canW / 2, canY + canH + 3 + flameLen * 0.6);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  /** Subtle magnetic energy arcs above head when Magnet is active */
+  private drawMagnetArcs(ctx: CanvasRenderingContext2D): void {
+    const pulse = (Math.sin(this.shieldTimer * 3) + 1) * 0.5;
+    const h = this.height;
+
+    ctx.save();
+    ctx.strokeStyle = `rgba(192, 132, 252, ${0.4 + pulse * 0.5})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, -h * 0.55, 14, -Math.PI * 0.8, -Math.PI * 0.2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(0, -h * 0.62, 20, -Math.PI * 0.75, -Math.PI * 0.25);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /** Glowing, pulsating spherical energy forcefield aura (protects player + jetpack) */
+  private drawShieldAura(ctx: CanvasRenderingContext2D): void {
+    const pulse = Math.sin(this.shieldTimer) * 2;
+    // Sized to encapsulate both stickman and jetpack
+    const baseR = this.hasJetpack
+      ? Math.max(this.width, this.height) * 0.68
+      : Math.max(this.width, this.height) * 0.58;
+    const r = baseR + pulse;
+
+    ctx.save();
+    // Translucent cyan bubble
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+    ctx.shadowColor = 'rgba(56, 189, 248, 0.9)';
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Shield rim outline
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#7dd3fc';
+    ctx.stroke();
+
+    // Rotating orbital spark node
+    const orbitAngle = this.shieldTimer;
+    const orbX = Math.cos(orbitAngle) * r;
+    const orbY = Math.sin(orbitAngle) * r;
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#38bdf8';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(orbX, orbY, 3.5, 0, Math.PI * 2);
+    ctx.fill();
 
     ctx.restore();
   }
@@ -187,5 +423,11 @@ export class Player {
     this.targetScaleY = 1;
     this.tilt = 0;
     this.targetTilt = 0;
+    this.hasShield = false;
+    this.shieldTimer = 0;
+    this.hasJetpack = false;
+    this.jetpackTimer = 0;
+    this.hasMagnet = false;
+    this.magnetTimer = 0;
   }
 }

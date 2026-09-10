@@ -48,6 +48,13 @@ export class Platform {
   private fadeAlpha = 1;
   private solid = true; // whether collision is active right now
 
+  // Elastic bounce dip on player contact
+  private dipOffset = 0;
+  private dipVelocity = 0;
+
+  // Spring compression animation (0 to 1)
+  private springCompress = 0;
+
   constructor(
     x: number,
     y: number,
@@ -77,6 +84,14 @@ export class Platform {
     return this.type === 'spring';
   }
 
+  /** Called when player lands on this platform — triggers an elastic dip. */
+  triggerBounce(isSpring = false): void {
+    this.dipVelocity = isSpring ? 75 : 55;
+    if (isSpring) {
+      this.springCompress = 1;
+    }
+  }
+
   /** Breakable platforms: mark as broken (called by GameEngine on bounce). */
   break(): void {
     if (this.type !== 'breakable' || this.broken) return;
@@ -85,8 +100,26 @@ export class Platform {
   }
 
   update(dt: number): void {
+    // Elastic spring physics for dip bounce
+    if (this.dipOffset !== 0 || this.dipVelocity !== 0) {
+      const springK = 380;
+      const damping = 22;
+      const force = -springK * this.dipOffset - damping * this.dipVelocity;
+      this.dipVelocity += force * dt;
+      this.dipOffset += this.dipVelocity * dt;
+      if (Math.abs(this.dipOffset) < 0.1 && Math.abs(this.dipVelocity) < 1) {
+        this.dipOffset = 0;
+        this.dipVelocity = 0;
+      }
+    }
+
+    // Spring compression decay
+    if (this.springCompress > 0) {
+      this.springCompress = Math.max(0, this.springCompress - dt * 4.5);
+    }
+
     // Moving
-    if (this.type === 'moving' || this.type === 'spring') {
+    if (this.type === 'moving' || (this.type === 'spring' && this.speed > 0)) {
       this.x += this.speed * this.direction * dt;
       if (this.x <= 0) {
         this.x = 0;
@@ -158,11 +191,12 @@ export class Platform {
     }
 
     const colors = this.getColors();
-    this.drawBody(ctx, screenX, screenY, colors.main, colors.dark);
+    const renderY = screenY + this.dipOffset;
+    this.drawBody(ctx, screenX, renderY, colors.main, colors.dark);
 
     // Spring on top
     if (this.type === 'spring') {
-      this.drawSpring(ctx, screenX, screenY);
+      this.drawSpring(ctx, screenX, renderY);
     }
 
     ctx.restore();
@@ -215,16 +249,20 @@ export class Platform {
   ): void {
     const cx = screenX + this.width / 2;
     const baseY = screenY;
-    const topY = baseY - 20;
+    // Compresses by up to 12px when springCompress is 1
+    const compOffset = this.springCompress * 12;
+    const springH = Math.max(8, 20 - compOffset);
+    const topY = baseY - springH;
 
     // Coil
     ctx.strokeStyle = COLORS.springCoil;
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.beginPath();
+    const coilStep = springH / 3.3;
     for (let i = 0; i < 3; i++) {
-      const y1 = baseY - (i + 1) * 6;
-      const y2 = baseY - (i + 1) * 6 - 3;
+      const y1 = baseY - (i + 1) * coilStep;
+      const y2 = baseY - (i + 1) * coilStep - (coilStep * 0.5);
       ctx.moveTo(cx - 10, y1);
       ctx.lineTo(cx + 10, y2);
     }
@@ -235,7 +273,7 @@ export class Platform {
     ctx.strokeStyle = COLORS.springDark;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    this.roundRect(ctx, cx - 16, topY, 32, 8, 4);
+    this.roundRect(ctx, cx - 16, topY, 32, 7, 4);
     ctx.fill();
     ctx.stroke();
   }
