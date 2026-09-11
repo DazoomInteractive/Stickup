@@ -74,8 +74,8 @@ export default function GameCanvas() {
     width: { xs: 88, sm: 98 },
     height: { xs: 88, sm: 98 },
     borderRadius: '50%',
-    border: '2.5px solid rgba(255, 255, 255, 0.75)',
-    background: 'rgba(37, 99, 235, 0.42)',
+    border: '2.5px solid rgba(255, 255, 255, 0.85)',
+    background: 'radial-gradient(circle, rgba(59, 130, 246, 0.72) 0%, rgba(29, 78, 216, 0.82) 100%)',
     color: '#FFFFFF',
     fontSize: { xs: 38, sm: 44 },
     display: 'flex',
@@ -84,13 +84,11 @@ export default function GameCanvas() {
     cursor: 'pointer',
     userSelect: 'none',
     touchAction: 'none',
-    backdropFilter: 'blur(8px)',
-    WebkitBackdropFilter: 'blur(8px)',
-    boxShadow: '0 8px 26px rgba(0, 0, 0, 0.28)',
+    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)',
     transition: 'transform 0.08s ease, background 0.08s ease',
     '&:active': {
       transform: 'scale(0.90)',
-      background: 'rgba(29, 78, 216, 0.85)',
+      background: 'radial-gradient(circle, rgba(29, 78, 216, 0.9) 0%, rgba(30, 58, 138, 0.95) 100%)',
     },
   });
 

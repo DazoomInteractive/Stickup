@@ -73,6 +73,13 @@ export class GameEngine {
   private rafId = 0;
   private lastTime = 0;
   private running = false;
+  private smoothDt = 1 / 60;
+
+  // Performance & Stutter-prevention caches
+  private skyGradient: CanvasGradient | null = null;
+  private cloudCanvas: HTMLCanvasElement | null = null;
+  private cleanupTimer = 0;
+  private highestPlatformY = 0;
 
   // State transition fade
   private transitionAlpha = 1;
@@ -87,6 +94,8 @@ export class GameEngine {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('2D canvas context unavailable');
     this.ctx = ctx;
+
+    this.initPrecomputedAssets();
 
     this.player = new Player(
       (GAME_WIDTH - PLAYER_WIDTH) / 2,
@@ -187,6 +196,49 @@ export class GameEngine {
     }
   }
 
+  /** Precompute textures and gradients once to avoid 60fps GC & canvas redraw overhead */
+  private initPrecomputedAssets(): void {
+    // 1. Sky Gradient (cached)
+    const grad = this.ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+    grad.addColorStop(0, COLORS.bgTop);
+    grad.addColorStop(0.55, COLORS.bgMid);
+    grad.addColorStop(1, COLORS.bgBottom);
+    this.skyGradient = grad;
+
+    // 2. Offscreen pre-rendered Cloud sprite for GPU-accelerated drawImage
+    try {
+      const cCanvas = document.createElement('canvas');
+      cCanvas.width = 140;
+      cCanvas.height = 100;
+      const cCtx = cCanvas.getContext('2d');
+      if (cCtx) {
+        const cx = 45;
+        const cy = 40;
+
+        // Soft shadow underneath
+        cCtx.fillStyle = COLORS.cloudShadow;
+        cCtx.beginPath();
+        for (const p of GameEngine.CLOUD_PUFFS) {
+          cCtx.moveTo(cx + p.x + p.r, cy + 6 + p.y);
+          cCtx.arc(cx + p.x, cy + 6 + p.y, p.r, 0, Math.PI * 2);
+        }
+        cCtx.fill();
+
+        // Main cloud body
+        cCtx.fillStyle = COLORS.cloud;
+        cCtx.beginPath();
+        for (const p of GameEngine.CLOUD_PUFFS) {
+          cCtx.moveTo(cx + p.x + p.r, cy + p.y);
+          cCtx.arc(cx + p.x, cy + p.y, p.r, 0, Math.PI * 2);
+        }
+        cCtx.fill();
+      }
+      this.cloudCanvas = cCanvas;
+    } catch {
+      this.cloudCanvas = null;
+    }
+  }
+
   // ---- Lifecycle ----
 
   start(): void {
@@ -272,6 +324,7 @@ export class GameEngine {
     this.initialBestScore = this.bestScore;
     this.isNewBest = false;
     this.recordCelebrated = false;
+    this.cleanupTimer = 0;
     this.generateInitialPlatforms();
   }
 
@@ -316,6 +369,7 @@ export class GameEngine {
       this.maybeSpawnJetpack(platform);
       this.maybeSpawnMagnet(platform);
     }
+    this.highestPlatformY = lastY;
   }
 
   private pickType(): PlatformType {
@@ -413,15 +467,10 @@ export class GameEngine {
   }
 
   private spawnPlatformsAbove(): void {
-    if (this.platforms.length === 0) return;
     const topScreenWorldY = this.camera.y - 100;
-    let highest = this.platforms[0];
-    for (const p of this.platforms) {
-      if (p.y < highest.y) highest = p;
-    }
-    while (highest.y > topScreenWorldY - PLATFORM_MAX_GAP) {
+    while (this.highestPlatformY > topScreenWorldY - PLATFORM_MAX_GAP) {
       const gap = PLATFORM_MIN_GAP + Math.random() * (PLATFORM_MAX_GAP - PLATFORM_MIN_GAP);
-      const newY = highest.y - gap;
+      const newY = this.highestPlatformY - gap;
       const x = Math.random() * (GAME_WIDTH - PLATFORM_WIDTH);
       const type = this.pickType();
       const platform = this.makePlatform(x, newY, type);
@@ -430,7 +479,7 @@ export class GameEngine {
       this.maybeSpawnShield(platform);
       this.maybeSpawnJetpack(platform);
       this.maybeSpawnMagnet(platform);
-      highest = platform;
+      this.highestPlatformY = newY;
     }
   }
 
@@ -579,10 +628,31 @@ export class GameEngine {
     if (!this.running) return;
     this.rafId = requestAnimationFrame(this.loop);
 
-    let dt = (now - this.lastTime) / 1000;
+    const rawDt = (now - this.lastTime) / 1000;
     this.lastTime = now;
-    // Clamp dt to avoid huge jumps after tab switches
-    if (dt > 0.05) dt = 0.05;
+
+    // Safety clamp for tab switching or first frame
+    if (rawDt <= 0 || rawDt > 0.1) {
+      this.update(1 / 60);
+      this.render();
+      return;
+    }
+
+    // Delta smoothing & VSync stabilization:
+    // Browser timer jitter causes dt to fluctuate (e.g. 15.6ms vs 17.4ms on 60Hz).
+    // Snapping to steady display refreshes eliminates physics micro-stutters.
+    let dt = rawDt;
+    if (Math.abs(dt - 0.016667) < 0.0028) {
+      dt = 0.016667; // 60 FPS lock
+    } else if (Math.abs(dt - 0.008333) < 0.0018) {
+      dt = 0.008333; // 120 FPS lock
+    } else if (Math.abs(dt - 0.011111) < 0.002) {
+      dt = 0.011111; // 90 FPS lock
+    } else {
+      // Rolling average to prevent sudden frame spikes
+      this.smoothDt += (dt - this.smoothDt) * 0.25;
+      dt = Math.min(this.smoothDt, 0.033);
+    }
 
     this.update(dt);
     this.render();
@@ -596,9 +666,7 @@ export class GameEngine {
 
     if (this.state === STATE.SPLASH) {
       this.splashElapsed += dt;
-      if (this.splashElapsed >= 3.2) {
-        this.goToMainMenu();
-      }
+      // Do not auto-enter: wait for user to tap the screen or press a key
       return;
     }
 
@@ -663,7 +731,13 @@ export class GameEngine {
 
       this.checkCollisions(dt);
       this.spawnPlatformsAbove();
-      this.cleanupOffscreen();
+
+      // Throttle offscreen cleanup to avoid GC spikes every frame
+      this.cleanupTimer += dt;
+      if (this.cleanupTimer >= 0.35) {
+        this.cleanupTimer = 0;
+        this.cleanupOffscreen();
+      }
 
       // Update Rising Lava mechanic
       this.lava.update(dt, this.height, this.camera.y, this.vfx);
@@ -824,12 +898,8 @@ export class GameEngine {
   }
 
   private drawBackground(): void {
-    // Sky gradient: light blue at top → mid blue → darker blue at bottom
-    const grad = this.ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-    grad.addColorStop(0, COLORS.bgTop);
-    grad.addColorStop(0.55, COLORS.bgMid);
-    grad.addColorStop(1, COLORS.bgBottom);
-    this.ctx.fillStyle = grad;
+    // Sky gradient: light blue at top → mid blue → darker blue at bottom (cached)
+    this.ctx.fillStyle = this.skyGradient || COLORS.bgMid;
     this.ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     // Soft stylized cartoon clouds (parallax with camera)
@@ -848,6 +918,14 @@ export class GameEngine {
     { x: 50, y: 740, scale: 0.75, speed: 0.11 },
   ];
 
+  static readonly CLOUD_PUFFS = [
+    { x: 0, y: 0, r: 26 },
+    { x: 24, y: -6, r: 22 },
+    { x: 48, y: 0, r: 26 },
+    { x: 20, y: 12, r: 24 },
+    { x: -16, y: 8, r: 20 },
+  ];
+
   private drawClouds(): void {
     const span = 900; // vertical repeat distance for cloud wrapping
     for (const c of GameEngine.CLOUDS) {
@@ -862,36 +940,25 @@ export class GameEngine {
   }
 
   private drawCloud(x: number, y: number, scale: number): void {
-    const s = scale;
-    this.ctx.save();
-    this.ctx.translate(x, y);
-    this.ctx.scale(s, s);
-
-    // Soft shadow underneath
-    this.ctx.fillStyle = COLORS.cloudShadow;
-    this.drawCloudShape(0, 6);
-    // Main cloud body
-    this.ctx.fillStyle = COLORS.cloud;
-    this.drawCloudShape(0, 0);
-
-    this.ctx.restore();
-  }
-
-  private drawCloudShape(ox: number, oy: number): void {
-    this.ctx.beginPath();
-    // A cluster of overlapping circles forming a fluffy cartoon cloud
-    const puffs: { x: number; y: number; r: number }[] = [
-      { x: 0, y: 0, r: 26 },
-      { x: 24, y: -6, r: 22 },
-      { x: 48, y: 0, r: 26 },
-      { x: 20, y: 12, r: 24 },
-      { x: -16, y: 8, r: 20 },
-    ];
-    for (const p of puffs) {
-      this.ctx.moveTo(ox + p.x + p.r, oy + p.y);
-      this.ctx.arc(ox + p.x, oy + p.y, p.r, 0, Math.PI * 2);
+    if (this.cloudCanvas) {
+      // Blazing-fast GPU hardware blit (0 allocations per frame)
+      const w = 140 * scale;
+      const h = 100 * scale;
+      this.ctx.drawImage(this.cloudCanvas, x - 45 * scale, y - 40 * scale, w, h);
+    } else {
+      // Fallback
+      this.ctx.save();
+      this.ctx.translate(x, y);
+      this.ctx.scale(scale, scale);
+      this.ctx.fillStyle = COLORS.cloud;
+      this.ctx.beginPath();
+      for (const p of GameEngine.CLOUD_PUFFS) {
+        this.ctx.moveTo(p.x + p.r, p.y);
+        this.ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      }
+      this.ctx.fill();
+      this.ctx.restore();
     }
-    this.ctx.fill();
   }
 
   /**

@@ -12,8 +12,6 @@ import {
   COLORS,
   STATE,
   GAME_VERSION,
-  STUDIO_NAME,
-  COPYRIGHT_NOTICE,
   type GameState,
 } from './constants';
 import type { Button } from './types';
@@ -375,11 +373,11 @@ export class UI {
     ctx.font = '900 12px Roboto, sans-serif';
     ctx.fillText(`${GAME_VERSION} V`, GAME_WIDTH / 2, badgeY + badgeH / 2);
 
-    // 5. Anti-Piracy & Copyright Protection Shield Card
+    // 5. Official Project & Creator Credit Card
     const cardW = 394;
-    const cardH = 205;
+    const cardH = 192;
     const cardX = (GAME_WIDTH - cardW) / 2;
-    const cardY = GAME_HEIGHT * 0.45;
+    const cardY = GAME_HEIGHT * 0.44;
 
     // Card background & glowing border
     ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
@@ -388,76 +386,111 @@ export class UI {
     ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
     ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.roundRect(cardX, cardY, cardW, cardH, 12);
+    ctx.roundRect(cardX, cardY, cardW, cardH, 14);
     ctx.fill();
     ctx.stroke();
 
-    // Card Header: Shield + Official Release
+    // Card Header: Sky Jumper v2.0.0
     ctx.shadowBlur = 0;
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = '#38bdf8';
-    ctx.font = '900 13px Roboto, sans-serif';
-    ctx.fillText('🛡️  OFFICIAL AUTHORIZED RELEASE', GAME_WIDTH / 2, cardY + 24);
+    ctx.font = '900 17px Roboto, sans-serif';
+    ctx.fillText('Sky Jumper v2.0.0', GAME_WIDTH / 2, cardY + 28);
 
     // Divider line
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(cardX + 24, cardY + 40);
-    ctx.lineTo(cardX + cardW - 24, cardY + 40);
+    ctx.moveTo(cardX + 28, cardY + 48);
+    ctx.lineTo(cardX + cardW - 28, cardY + 48);
     ctx.stroke();
 
-    // Creator & Copyright
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 13px Roboto, sans-serif';
-    ctx.fillText(`Creator: ${STUDIO_NAME}`, GAME_WIDTH / 2, cardY + 58);
-
+    // Created & Developed by:
     ctx.fillStyle = '#94a3b8';
     ctx.font = '500 12px Roboto, sans-serif';
-    ctx.fillText(COPYRIGHT_NOTICE, GAME_WIDTH / 2, cardY + 78);
+    ctx.fillText('Created & Developed by:', GAME_WIDTH / 2, cardY + 70);
 
-    // Anti-piracy legal notice text (scannable, international IP protection)
+    // DazzomInteractive
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '900 17px Roboto, sans-serif';
+    ctx.fillText('DazzomInteractive', GAME_WIDTH / 2, cardY + 95);
+
+    // Built with the assistance of AI (Google AI Studio)
     ctx.fillStyle = '#cbd5e1';
-    ctx.font = '400 11px Roboto, sans-serif';
-    const lines = [
-      'This software is protected by international copyright laws.',
-      'Unauthorized copying, reverse engineering, redistribution,',
-      'or re-uploading of this game/APK to Google Play Store,',
-      'App Store, Itch.io, or other distribution channels is strictly',
-      'prohibited and subject to immediate DMCA takedown actions.',
-    ];
-    let lineY = cardY + 104;
-    for (const line of lines) {
-      ctx.fillText(line, GAME_WIDTH / 2, lineY);
-      lineY += 16;
-    }
+    ctx.font = '500 12px Roboto, sans-serif';
+    ctx.fillText('Built with the assistance of AI (Google AI Studio)', GAME_WIDTH / 2, cardY + 128);
 
-    // 6. Progress bar (3.2 seconds duration)
+    // © 2026 DazzomInteractive.
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 12px Roboto, sans-serif';
+    ctx.fillText('© 2026 DazzomInteractive.', GAME_WIDTH / 2, cardY + 158);
+
+    // 6. Progress bar (fills in 2.2 seconds, waits for user tap)
     const progW = 260;
-    const progH = 4;
+    const progH = 6;
     const progX = (GAME_WIDTH - progW) / 2;
-    const progY = GAME_HEIGHT * 0.76;
-    const progress = Math.min(1, elapsed / 3.0);
+    const progY = cardY + cardH + 24;
+    const loadDuration = 2.2;
+    const progress = Math.min(1, elapsed / loadDuration);
+    const isLoaded = progress >= 1.0;
 
+    // Track background
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.beginPath();
-    ctx.roundRect(progX, progY, progW, progH, 2);
+    ctx.roundRect(progX, progY, progW, progH, 3);
     ctx.fill();
 
-    ctx.fillStyle = '#38bdf8';
-    ctx.shadowColor = 'rgba(56, 189, 248, 0.8)';
-    ctx.shadowBlur = 6;
+    // Filled progress
+    ctx.fillStyle = isLoaded ? '#22c55e' : '#38bdf8';
+    ctx.shadowColor = isLoaded ? 'rgba(34, 197, 94, 0.8)' : 'rgba(56, 189, 248, 0.8)';
+    ctx.shadowBlur = 8;
     ctx.beginPath();
-    ctx.roundRect(progX, progY, progW * progress, progH, 2);
+    ctx.roundRect(progX, progY, progW * progress, progH, 3);
     ctx.fill();
-
-    // 7. Interactive Tap to Continue Prompt (pulsing alpha)
     ctx.shadowBlur = 0;
-    const pulseAlpha = 0.5 + 0.5 * Math.sin(elapsed * 4);
-    ctx.globalAlpha = alpha * pulseAlpha;
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 13px Roboto, sans-serif';
-    ctx.fillText('TAP ANYWHERE TO CONTINUE ▶', GAME_WIDTH / 2, GAME_HEIGHT * 0.82);
+
+    // Loading status text
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (!isLoaded) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 11px Roboto, sans-serif';
+      ctx.fillText(`LOADING... ${Math.floor(progress * 100)}%`, GAME_WIDTH / 2, progY + 18);
+    } else {
+      ctx.fillStyle = '#86efac';
+      ctx.font = 'bold 11px Roboto, sans-serif';
+      ctx.fillText('100% READY', GAME_WIDTH / 2, progY + 18);
+    }
+
+    // 7. Interactive Tap to Continue Button (pulsing when loaded)
+    const pulse = 0.7 + 0.3 * Math.sin(elapsed * 5);
+    const btnW = 260;
+    const btnH = 40;
+    const btnX = (GAME_WIDTH - btnW) / 2;
+    const btnY = progY + 34;
+
+    ctx.save();
+    ctx.globalAlpha = alpha * (isLoaded ? pulse : 0.65);
+    ctx.fillStyle = isLoaded ? 'rgba(14, 165, 233, 0.25)' : 'rgba(15, 23, 42, 0.5)';
+    ctx.strokeStyle = isLoaded ? '#38bdf8' : 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = isLoaded ? 1.8 : 1;
+    if (isLoaded) {
+      ctx.shadowColor = 'rgba(56, 189, 248, 0.6)';
+      ctx.shadowBlur = 10;
+    }
+    ctx.beginPath();
+    ctx.roundRect(btnX, btnY, btnW, btnH, 20);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = isLoaded ? '#ffffff' : '#94a3b8';
+    ctx.font = '900 13px Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isLoaded ? '▶  TAP SCREEN TO PLAY  ◀' : 'TAP TO SKIP  ▶', GAME_WIDTH / 2, btnY + btnH / 2);
+    ctx.restore();
 
     ctx.restore();
   }
