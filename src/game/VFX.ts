@@ -190,6 +190,50 @@ export class VFX {
     });
   }
 
+  /** Dynamic Jump Trail particles for all 21 unique unlockable trails. */
+  spawnTrail(x: number, y: number, trailType: string): void {
+    if (!trailType || trailType === 'none' || this.particles.length > 140) return;
+
+    const trailPalettes: Record<string, string[]> = {
+      mint: ['#34d399', '#6ee7b7', '#a7f3d0', '#059669'],
+      gold_spark: ['#fbbf24', '#f59e0b', '#fef08a', '#d97706'],
+      bubbles: ['#38bdf8', '#7dd3fc', '#bae6fd', '#0284c7'],
+      sakura: ['#f472b6', '#fbcfe8', '#f9a8d4', '#ec4899'],
+      fire: ['#f97316', '#ef4444', '#fbbf24', '#fed7aa'],
+      lightning: ['#eab308', '#facc15', '#fef08a', '#ffffff'],
+      neon_cyan: ['#06b6d4', '#22d3ee', '#67e8f9', '#ffffff'],
+      void: ['#a855f7', '#c084fc', '#7e22ce', '#3b0764'],
+      crimson: ['#ef4444', '#dc2626', '#b91c1c', '#f87171'],
+      emerald: ['#10b981', '#34d399', '#059669', '#6ee7b7'],
+      rainbow: ['#f43f5e', '#fb923c', '#facc15', '#4ade80', '#38bdf8', '#c084fc'],
+      frost: ['#bae6fd', '#e0f2fe', '#7dd3fc', '#ffffff'],
+      music: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe'],
+      toxic: ['#84cc16', '#a3e635', '#4d7c0f', '#bef264'],
+      starlight: ['#fde047', '#fef08a', '#ffffff', '#f59e0b'],
+      magma: ['#ea580c', '#c2410c', '#f97316', '#7c2d12'],
+      diamond_glow: ['#38bdf8', '#7dd3fc', '#ffffff', '#bae6fd'],
+      matrix: ['#22c55e', '#4ade80', '#15803d', '#86efac'],
+      solar: ['#f59e0b', '#fbbf24', '#ea580c', '#fde047'],
+      galaxy: ['#c084fc', '#e879f9', '#818cf8', '#38bdf8'],
+    };
+
+    const colors = trailPalettes[trailType] || ['#ffffff', '#cbd5e1'];
+    const count = 2;
+    for (let i = 0; i < count; i++) {
+      this.particles.push({
+        x: x + (Math.random() - 0.5) * 12,
+        y: y + (Math.random() - 0.5) * 8,
+        vx: (Math.random() - 0.5) * 45,
+        vy: (Math.random() - 0.5) * 35,
+        life: 0.35 + Math.random() * 0.18,
+        maxLife: 0.55,
+        size: 2.5 + Math.random() * 3.2,
+        type: 'sparkle',
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+  }
+
   /** Floating "+1" text that rises and fades. */
   spawnFloatingText(x: number, y: number, text: string, color: string): void {
     this.texts.push({

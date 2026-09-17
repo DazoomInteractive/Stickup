@@ -15,6 +15,26 @@ import {
   type GameState,
 } from './constants';
 import type { Button } from './types';
+import {
+  ShopManager,
+  TRAILS,
+  SKINS,
+  BACKGROUNDS,
+} from './ShopManager';
+import { AdsService } from './AdsService';
+
+export const PRIVACY_POLICY_URL =
+  'https://telegra.ph/Sky-Jumper-2D---Privacy-Policy--Terms-of-Service-09-15';
+
+export function openPrivacyPolicy(): void {
+  if (typeof window !== 'undefined') {
+    try {
+      window.open(PRIVACY_POLICY_URL, '_blank', 'noopener,noreferrer');
+    } catch {
+      window.location.href = PRIVACY_POLICY_URL;
+    }
+  }
+}
 
 export class UI {
   private buttons: Record<string, Button> = {};
@@ -28,6 +48,10 @@ export class UI {
 
   private pauseCallback: (() => void) | null = null;
 
+  // Game over ad state tracking to prevent phantom button clicks
+  private gameOverCanRevive = true;
+  private gameOverCanRecover = true;
+
   // New Record celebration banner state
   private recordBannerTimer = 0;
   private recordBannerDuration = 2.8;
@@ -38,13 +62,13 @@ export class UI {
   }
 
   private createButtons(): void {
-    const btnW = 200;
-    const btnH = 60;
+    const btnW = 240;
+    const btnH = 54;
 
     this.buttons.play = {
       label: 'PLAY',
       x: (GAME_WIDTH - btnW) / 2,
-      y: GAME_HEIGHT * 0.52,
+      y: GAME_HEIGHT * 0.49,
       width: btnW,
       height: btnH,
       color: COLORS.button,
@@ -53,23 +77,72 @@ export class UI {
       onClick: () => {},
     };
 
-    this.buttons.restart = {
-      label: 'RESTART',
+    this.buttons.shopMenu = {
+      label: '🛒  SHOP & UPGRADES',
       x: (GAME_WIDTH - btnW) / 2,
-      y: GAME_HEIGHT * 0.6,
+      y: GAME_HEIGHT * 0.58,
+      width: btnW,
+      height: 48,
+      color: '#7c3aed',
+      hoverColor: '#8b5cf6',
+      activeColor: '#6d28d9',
+      onClick: () => {},
+    };
+
+    this.buttons.restart = {
+      label: '🔄  RESTART',
+      x: (GAME_WIDTH - btnW) / 2,
+      y: GAME_HEIGHT * 0.58,
       width: btnW,
       height: btnH,
       color: COLORS.button,
       hoverColor: COLORS.buttonHover,
       activeColor: COLORS.buttonActive,
+      onClick: () => {},
+    };
+
+    this.buttons.shopGameOver = {
+      label: '🛒  SHOP & UPGRADES',
+      x: (GAME_WIDTH - btnW) / 2,
+      y: GAME_HEIGHT * 0.66,
+      width: btnW,
+      height: 48,
+      color: '#7c3aed',
+      hoverColor: '#8b5cf6',
+      activeColor: '#6d28d9',
+      onClick: () => {},
+    };
+
+    // Rewarded Ad Buttons for Mobile / PWA / Uptodown (Strictly hidden on Itch.io)
+    this.buttons.recoverDiamonds = {
+      label: '📺 RECOVER 100% 💎',
+      x: (GAME_WIDTH - 250) / 2,
+      y: GAME_HEIGHT * 0.52,
+      width: 250,
+      height: 46,
+      color: '#059669',
+      hoverColor: '#10b981',
+      activeColor: '#047857',
+      onClick: () => {},
+    };
+
+    this.buttons.revive = {
+      label: '📺 REVIVE & RESCUE 🚀',
+      x: (GAME_WIDTH - 250) / 2,
+      y: GAME_HEIGHT * 0.59,
+      width: 250,
+      height: 46,
+      color: '#ea580c',
+      hoverColor: '#f97316',
+      activeColor: '#c2410c',
       onClick: () => {},
     };
 
     // Pause Menu buttons
     const pauseBtnW = 240;
-    const pauseBtnH = 50;
-    const pauseStartY = GAME_HEIGHT * 0.36;
-    const gap = 58;
+    const pauseBtnH = 46;
+    const pauseStartY = GAME_HEIGHT * 0.17 + 104;
+    const gap = 53;
 
     this.buttons.resume = {
       label: '▶  RESUME',
@@ -119,6 +192,35 @@ export class UI {
       onClick: () => {},
     };
 
+    this.buttons.privacyPause = {
+      label: '🔒  PRIVACY & TERMS',
+      x: (GAME_WIDTH - pauseBtnW) / 2,
+      y: pauseStartY + gap * 4,
+      width: pauseBtnW,
+      height: 42,
+      color: '#334155',
+      hoverColor: '#475569',
+      activeColor: '#1e293b',
+      onClick: () => {
+        openPrivacyPolicy();
+      },
+    };
+
+    // Main Menu bottom Privacy Policy link button
+    this.buttons.privacyMenu = {
+      label: '🔒  Privacy Policy & Terms',
+      x: (GAME_WIDTH - 240) / 2,
+      y: GAME_HEIGHT * 0.772,
+      width: 240,
+      height: 34,
+      color: 'rgba(15, 23, 42, 0.82)',
+      hoverColor: 'rgba(30, 41, 59, 0.95)',
+      activeColor: '#0f172a',
+      onClick: () => {
+        openPrivacyPolicy();
+      },
+    };
+
     for (const key of Object.keys(this.buttons)) {
       this.hoverScale[key] = 1;
       this.pressScale[key] = 1;
@@ -153,14 +255,34 @@ export class UI {
     this.pauseCallback = cb;
   }
 
+  setRecoverDiamondsCallback(cb: () => void): void {
+    this.buttons.recoverDiamonds.onClick = cb;
+  }
+
+  setReviveCallback(cb: () => void): void {
+    this.buttons.revive.onClick = cb;
+  }
+
+  setShopCallback(cb: () => void): void {
+    this.buttons.shopMenu.onClick = cb;
+    this.buttons.shopGameOver.onClick = cb;
+  }
+
   /** Handle pointer move for hover detection. */
   handlePointerMove(px: number, py: number, state: GameState): void {
     if (state === STATE.MAIN_MENU) {
       this.hoverScale.play = this.contains(this.buttons.play, px, py) ? 1.06 : 1;
+      this.hoverScale.shopMenu = this.contains(this.buttons.shopMenu, px, py) ? 1.05 : 1;
+      this.hoverScale.privacyMenu = this.contains(this.buttons.privacyMenu, px, py) ? 1.05 : 1;
     } else if (state === STATE.GAME_OVER) {
+      const adsAvailable = AdsService.getInstance().isAdsEnabled();
+
+      this.hoverScale.revive = adsAvailable && this.gameOverCanRevive && this.contains(this.buttons.revive, px, py) ? 1.05 : 1;
+      this.hoverScale.recoverDiamonds = adsAvailable && this.gameOverCanRecover && this.contains(this.buttons.recoverDiamonds, px, py) ? 1.05 : 1;
       this.hoverScale.restart = this.contains(this.buttons.restart, px, py) ? 1.06 : 1;
+      this.hoverScale.shopGameOver = this.contains(this.buttons.shopGameOver, px, py) ? 1.05 : 1;
     } else if (state === STATE.PAUSED) {
-      const pauseKeys = ['resume', 'restartPause', 'soundToggle', 'mainMenu'];
+      const pauseKeys = ['resume', 'restartPause', 'soundToggle', 'mainMenu', 'privacyPause'];
       for (const k of pauseKeys) {
         this.hoverScale[k] = this.contains(this.buttons[k], px, py) ? 1.05 : 1;
       }
@@ -188,7 +310,7 @@ export class UI {
     }
 
     if (state === STATE.PAUSED) {
-      const pauseKeys = ['resume', 'restartPause', 'soundToggle', 'mainMenu'];
+      const pauseKeys = ['resume', 'restartPause', 'soundToggle', 'mainMenu', 'privacyPause'];
       for (const k of pauseKeys) {
         const btn = this.buttons[k];
         if (this.contains(btn, px, py)) {
@@ -200,20 +322,61 @@ export class UI {
       return true;
     }
 
-    const activeKey = state === STATE.MAIN_MENU ? 'play' : state === STATE.GAME_OVER ? 'restart' : null;
-    if (activeKey) {
-      const btn = this.buttons[activeKey];
-      if (this.contains(btn, px, py)) {
-        this.pressScale[activeKey] = 0.92;
-        btn.onClick();
+    if (state === STATE.MAIN_MENU) {
+      if (this.contains(this.buttons.play, px, py)) {
+        this.pressScale.play = 0.92;
+        this.buttons.play.onClick();
+        return true;
+      }
+      if (this.contains(this.buttons.shopMenu, px, py)) {
+        this.pressScale.shopMenu = 0.92;
+        this.buttons.shopMenu.onClick();
+        return true;
+      }
+      if (this.contains(this.buttons.privacyMenu, px, py)) {
+        this.pressScale.privacyMenu = 0.92;
+        this.buttons.privacyMenu.onClick();
+        return true;
+      }
+    }
+
+    if (state === STATE.GAME_OVER) {
+      const adsAvailable = AdsService.getInstance().isAdsEnabled();
+
+      if (adsAvailable && this.gameOverCanRevive && this.contains(this.buttons.revive, px, py)) {
+        this.pressScale.revive = 0.92;
+        this.buttons.revive.onClick();
+        return true;
+      }
+
+      if (adsAvailable && this.gameOverCanRecover && this.contains(this.buttons.recoverDiamonds, px, py)) {
+        this.pressScale.recoverDiamonds = 0.92;
+        this.buttons.recoverDiamonds.onClick();
+        return true;
+      }
+
+      if (this.contains(this.buttons.restart, px, py)) {
+        this.pressScale.restart = 0.92;
+        this.buttons.restart.onClick();
+        return true;
+      }
+
+      if (this.contains(this.buttons.shopGameOver, px, py)) {
+        this.pressScale.shopGameOver = 0.92;
+        this.buttons.shopGameOver.onClick();
         return true;
       }
     }
     return false;
   }
 
-  private contains(btn: Button, px: number, py: number): boolean {
-    return px >= btn.x && px <= btn.x + btn.width && py >= btn.y && py <= btn.y + btn.height;
+  private contains(btn: Button, px: number, py: number, pad = 8): boolean {
+    return (
+      px >= btn.x - pad &&
+      px <= btn.x + btn.width + pad &&
+      py >= btn.y - pad &&
+      py <= btn.y + btn.height + pad
+    );
   }
 
   private inMuteButton(px: number, py: number): boolean {
@@ -350,8 +513,8 @@ export class UI {
     ctx.shadowBlur = 10;
     ctx.shadowOffsetY = 3;
     ctx.fillStyle = '#38bdf8';
-    ctx.font = '900 34px Roboto, sans-serif';
-    ctx.fillText('SKY JUMPER', GAME_WIDTH / 2, GAME_HEIGHT * 0.36);
+    ctx.font = '900 36px Roboto, sans-serif';
+    ctx.fillText('STICKUP', GAME_WIDTH / 2, GAME_HEIGHT * 0.36);
 
     // Version pill badge
     ctx.shadowBlur = 0;
@@ -390,13 +553,13 @@ export class UI {
     ctx.fill();
     ctx.stroke();
 
-    // Card Header: Sky Jumper v2.0.0
+    // Card Header: StickUp v2.0.0
     ctx.shadowBlur = 0;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#38bdf8';
     ctx.font = '900 17px Roboto, sans-serif';
-    ctx.fillText('Sky Jumper v2.0.0', GAME_WIDTH / 2, cardY + 28);
+    ctx.fillText('StickUp v2.0.0', GAME_WIDTH / 2, cardY + 28);
 
     // Divider line
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
@@ -524,7 +687,7 @@ export class UI {
     this.drawLogo(ctx, GAME_WIDTH / 2, GAME_HEIGHT * 0.16);
 
     // Title — 3D layered sky-blue with white outline
-    this.drawTitle(ctx, 'Sky Jumper', GAME_WIDTH / 2, GAME_HEIGHT * 0.30);
+    this.drawTitle(ctx, 'StickUp', GAME_WIDTH / 2, GAME_HEIGHT * 0.30);
 
     // Best score badge in a clean dark pill container (immune to clouds)
     const scorePillW = 210;
@@ -560,14 +723,15 @@ export class UI {
     ctx.fillText('How high can you climb?', GAME_WIDTH / 2, GAME_HEIGHT * 0.445);
     ctx.restore();
 
-    // Play button
+    // Play button & Shop button
     this.drawButton(ctx, 'play');
+    this.drawButton(ctx, 'shopMenu');
 
     // Controls hint in high-contrast dark card (never blends with white clouds)
     const ctrlW = 348;
-    const ctrlH = 58;
+    const ctrlH = 54;
     const ctrlX = (GAME_WIDTH - ctrlW) / 2;
-    const ctrlY = GAME_HEIGHT * 0.675;
+    const ctrlY = GAME_HEIGHT * 0.665;
 
     ctx.save();
     ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
@@ -582,18 +746,21 @@ export class UI {
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#f8fafc';
     ctx.font = 'bold 13px Roboto, sans-serif';
-    ctx.fillText('🎮 CONTROLS: ← → or A / D to move', GAME_WIDTH / 2, ctrlY + 19);
+    ctx.fillText('🎮 CONTROLS: ← → or A / D to move', GAME_WIDTH / 2, ctrlY + 18);
 
     ctx.fillStyle = '#93c5fd';
     ctx.font = '500 12px Roboto, sans-serif';
-    ctx.fillText('Space / Enter or Tap to jump into action', GAME_WIDTH / 2, ctrlY + 40);
+    ctx.fillText('Space / Enter or Tap to jump into action', GAME_WIDTH / 2, ctrlY + 38);
     ctx.restore();
+
+    // Privacy Policy button
+    this.drawButton(ctx, 'privacyMenu');
 
     // Bottom Anti-Piracy Copyright in clean dark pill (fully readable)
     const footW = 310;
     const footH = 34;
     const footX = (GAME_WIDTH - footW) / 2;
-    const footY = GAME_HEIGHT * 0.88;
+    const footY = GAME_HEIGHT * 0.845;
 
     ctx.save();
     ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
@@ -626,6 +793,7 @@ export class UI {
     ctx: CanvasRenderingContext2D,
     height: number,
     coins: number,
+    relics = 0,
     bestScore: number,
     isBest = false,
     hasShield = false,
@@ -633,6 +801,8 @@ export class UI {
     jetpackTimer = 0,
     hasMagnet = false,
     magnetTimer = 0,
+    hasMultiplier = false,
+    multiplierTimer = 0,
   ): void {
     ctx.save();
 
@@ -700,6 +870,16 @@ export class UI {
       ctx.shadowColor = 'rgba(192, 132, 252, 0.7)';
       ctx.shadowBlur = 6;
       ctx.fillText(`🧲 MAGNET ${Math.max(0, magnetTimer).toFixed(1)}s`, 16, powerupY);
+      powerupY += 22;
+    }
+
+    if (hasMultiplier) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '900 13px Roboto, sans-serif';
+      ctx.shadowColor = 'rgba(245, 158, 11, 0.7)';
+      ctx.shadowBlur = 6;
+      ctx.fillText(`🪙 2X MULTIPLIER ${Math.max(0, multiplierTimer).toFixed(1)}s`, 16, powerupY);
+      powerupY += 22;
     }
 
     ctx.shadowBlur = 4;
@@ -707,15 +887,15 @@ export class UI {
 
     // 4. COIN on top-right (with dark pill backing)
     const coinText = `🪙 ${coins}`;
-    ctx.font = '900 17px Roboto, sans-serif';
+    ctx.font = '900 15px Roboto, sans-serif';
     const coinMeasure = ctx.measureText(coinText).width;
-    const coinPillW = Math.max(76, coinMeasure + 22);
+    const coinPillW = Math.max(74, coinMeasure + 20);
     const coinPillX = GAME_WIDTH - 56 - coinPillW;
 
     ctx.save();
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
-    ctx.lineWidth = 1;
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.roundRect(coinPillX, 10, coinPillW, 32, 16);
     ctx.fill();
@@ -725,6 +905,27 @@ export class UI {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fef08a';
     ctx.fillText(coinText, coinPillX + coinPillW / 2, 26);
+
+    // 5. DIAMONDS (💎) on top-right next to coin pill
+    const diamondText = `💎 ${relics}`;
+    ctx.font = '900 15px Roboto, sans-serif';
+    const diamondMeasure = ctx.measureText(diamondText).width;
+    const diamondPillW = Math.max(70, diamondMeasure + 20);
+    const diamondPillX = coinPillX - diamondPillW - 8;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(12, 74, 110, 0.82)'; // Cyan-blue pill
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(diamondPillX, 10, diamondPillW, 32, 16);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#bae6fd';
+    ctx.fillText(diamondText, diamondPillX + diamondPillW / 2, 26);
 
     ctx.restore();
 
@@ -849,9 +1050,9 @@ export class UI {
 
     // Modal Card Container
     const cardW = 320;
-    const cardH = 430;
+    const cardH = 485;
     const cardX = (GAME_WIDTH - cardW) / 2;
-    const cardY = GAME_HEIGHT * 0.22;
+    const cardY = GAME_HEIGHT * 0.17;
 
     // Card shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
@@ -874,16 +1075,16 @@ export class UI {
     ctx.textBaseline = 'middle';
     ctx.fillStyle = COLORS.text;
     ctx.font = 'bold 30px Roboto, sans-serif';
-    ctx.fillText('PAUSED', GAME_WIDTH / 2, cardY + 42);
+    ctx.fillText('PAUSED', GAME_WIDTH / 2, cardY + 38);
 
     // Score & Coins badge
     ctx.fillStyle = '#f1f5f9';
-    this.roundRectPath(ctx, cardX + 24, cardY + 70, cardW - 48, 34, 10);
+    this.roundRectPath(ctx, cardX + 24, cardY + 64, cardW - 48, 32, 10);
     ctx.fill();
 
     ctx.fillStyle = '#475569';
-    ctx.font = '600 15px Roboto, sans-serif';
-    ctx.fillText(`Score: ${height}m   •   Coins: ${coins}`, GAME_WIDTH / 2, cardY + 87);
+    ctx.font = '600 14px Roboto, sans-serif';
+    ctx.fillText(`Score: ${height}m   •   Coins: ${coins}`, GAME_WIDTH / 2, cardY + 80);
 
     // Update sound button label and colors dynamically
     this.buttons.soundToggle.label = muted ? '🔇  SOUND: OFF' : '🔊  SOUND: ON';
@@ -896,11 +1097,12 @@ export class UI {
     this.drawButton(ctx, 'restartPause');
     this.drawButton(ctx, 'soundToggle');
     this.drawButton(ctx, 'mainMenu');
+    this.drawButton(ctx, 'privacyPause');
 
     // Hint at bottom
     ctx.fillStyle = '#94a3b8';
-    ctx.font = '400 13px Roboto, sans-serif';
-    ctx.fillText('Press Esc or P to resume', GAME_WIDTH / 2, cardY + cardH - 20);
+    ctx.font = '400 12px Roboto, sans-serif';
+    ctx.fillText('Press Esc or P to resume', GAME_WIDTH / 2, cardY + cardH - 18);
   }
 
   drawGameOver(
@@ -908,46 +1110,169 @@ export class UI {
     alpha: number,
     height: number,
     coins: number,
+    relics = 0,
+    lostRelics = 0,
     bestScore: number,
     isNewBest: boolean,
+    canRevive = true,
+    canRecover = true,
+    recoveredAmount = 0,
   ): void {
     ctx.globalAlpha = alpha;
+
+    // Save state for safe click and hover detection
+    this.gameOverCanRevive = canRevive;
+    this.gameOverCanRecover = canRecover;
 
     // Overlay
     ctx.fillStyle = COLORS.overlay;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
+    const adsAvailable = AdsService.getInstance().isAdsEnabled();
+
     // Title
+    const titleY = adsAvailable ? GAME_HEIGHT * 0.14 : GAME_HEIGHT * 0.18;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = COLORS.text;
-    ctx.font = 'bold 46px Roboto, sans-serif';
-    ctx.fillText('Game Over', GAME_WIDTH / 2, GAME_HEIGHT * 0.26);
+    ctx.font = 'bold 40px Roboto, sans-serif';
+    ctx.fillText('Game Over', GAME_WIDTH / 2, titleY);
 
-    // Stats
-    ctx.font = 'bold 26px Roboto, sans-serif';
-    ctx.fillStyle = COLORS.text;
-    ctx.fillText(`SCORE: ${height}m`, GAME_WIDTH / 2, GAME_HEIGHT * 0.36);
-    ctx.fillText(`COINS: ${coins}`, GAME_WIDTH / 2, GAME_HEIGHT * 0.42);
+    // Stats card
+    const cardW = 340;
+    const cardH = lostRelics > 0 ? 176 : 154;
+    const cardX = (GAME_WIDTH - cardW) / 2;
+    const cardY = adsAvailable ? GAME_HEIGHT * 0.185 : GAME_HEIGHT * 0.235;
 
-    // Best score line with highlight
-    if (isNewBest) {
-      ctx.fillStyle = COLORS.coinText;
-      ctx.font = 'bold 22px Roboto, sans-serif';
-      ctx.fillText(`★ NEW BEST SCORE: ${bestScore}m! ★`, GAME_WIDTH / 2, GAME_HEIGHT * 0.49);
-    } else {
-      ctx.fillStyle = COLORS.text;
-      ctx.font = '500 20px Roboto, sans-serif';
-      ctx.fillText(`BEST SCORE: ${bestScore}m`, GAME_WIDTH / 2, GAME_HEIGHT * 0.49);
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    // Height Score
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '900 22px Roboto, sans-serif';
+    ctx.fillText(`HEIGHT: ${height}m`, GAME_WIDTH / 2, cardY + 30);
+
+    // Coins
+    ctx.fillStyle = '#b45309';
+    ctx.font = 'bold 17px Roboto, sans-serif';
+    ctx.fillText(`🪙 TOTAL COINS: ${coins}`, GAME_WIDTH / 2, cardY + 60);
+
+    // Saved Diamonds
+    ctx.fillStyle = '#0284c7';
+    ctx.font = 'bold 15px Roboto, sans-serif';
+    ctx.fillText(`💎 SAVED DIAMONDS: +${relics}`, GAME_WIDTH / 2, cardY + 88);
+
+    if (lostRelics > 0) {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '600 12px Roboto, sans-serif';
+      ctx.fillText(`⚠️ Lost ${lostRelics} unsold diamonds on fall!`, GAME_WIDTH / 2, cardY + 112);
     }
 
-    // Restart button
+    // Best score line with highlight
+    const bestY = lostRelics > 0 ? cardY + 144 : cardY + 124;
+    if (isNewBest) {
+      ctx.fillStyle = '#d97706';
+      ctx.font = '900 14px Roboto, sans-serif';
+      ctx.fillText(`★ NEW RECORD: ${bestScore}m! ★`, GAME_WIDTH / 2, bestY);
+    } else {
+      ctx.fillStyle = '#64748b';
+      ctx.font = '600 13px Roboto, sans-serif';
+      ctx.fillText(`Best Record: ${bestScore}m`, GAME_WIDTH / 2, bestY);
+    }
+    ctx.restore();
+
+    // Dynamically position action and rewarded ad buttons
+    let curY = cardY + cardH + 12;
+    const btnW = 260;
+    const btnH = 44;
+    const gap = 8;
+
+    // 1. Revive & Rescue Ad Button (1x per run)
+    if (adsAvailable) {
+      this.buttons.revive.x = (GAME_WIDTH - btnW) / 2;
+      this.buttons.revive.y = curY;
+      this.buttons.revive.width = btnW;
+      this.buttons.revive.height = btnH;
+      if (canRevive) {
+        this.buttons.revive.label = '📺 RESCUE 🚀 (AD)';
+        this.buttons.revive.color = '#ea580c';
+        this.buttons.revive.hoverColor = '#f97316';
+        this.drawButton(ctx, 'revive');
+      } else {
+        this.buttons.revive.label = '✓ ALREADY RESCUED';
+        this.buttons.revive.color = '#64748b';
+        this.buttons.revive.hoverColor = '#64748b';
+        this.drawButton(ctx, 'revive');
+      }
+      curY += btnH + gap;
+    } else {
+      this.buttons.revive.x = -9999;
+      this.buttons.revive.y = -9999;
+      this.buttons.revive.width = 0;
+      this.buttons.revive.height = 0;
+    }
+
+    // 2. Recover Diamonds Ad Button
+    if (adsAvailable) {
+      this.buttons.recoverDiamonds.x = (GAME_WIDTH - btnW) / 2;
+      this.buttons.recoverDiamonds.y = curY;
+      this.buttons.recoverDiamonds.width = btnW;
+      this.buttons.recoverDiamonds.height = btnH;
+      if (canRecover) {
+        const totalRelics = relics + lostRelics;
+        const targetTotal = Math.ceil(totalRelics * 0.5);
+        const recoverable = lostRelics > 0 ? Math.max(1, targetTotal - relics) : 1;
+        this.buttons.recoverDiamonds.label = lostRelics > 0
+          ? `📺 RECOVER +${recoverable} 💎 (AD)`
+          : '📺 BONUS +1 💎 (AD)';
+        this.buttons.recoverDiamonds.color = '#059669';
+        this.buttons.recoverDiamonds.hoverColor = '#10b981';
+        this.drawButton(ctx, 'recoverDiamonds');
+      } else {
+        const shownRecovered = recoveredAmount > 0 ? recoveredAmount : 1;
+        this.buttons.recoverDiamonds.label = `✓ +${shownRecovered} 💎 RECOVERED`;
+        this.buttons.recoverDiamonds.color = '#64748b';
+        this.buttons.recoverDiamonds.hoverColor = '#64748b';
+        this.drawButton(ctx, 'recoverDiamonds');
+      }
+      curY += btnH + gap;
+    } else {
+      this.buttons.recoverDiamonds.x = -9999;
+      this.buttons.recoverDiamonds.y = -9999;
+      this.buttons.recoverDiamonds.width = 0;
+      this.buttons.recoverDiamonds.height = 0;
+    }
+
+    // 3. Restart button
+    this.buttons.restart.label = `🔄 RESTART`;
+    this.buttons.restart.x = (GAME_WIDTH - btnW) / 2;
+    this.buttons.restart.y = curY;
+    this.buttons.restart.width = btnW;
+    this.buttons.restart.height = btnH;
+    this.buttons.restart.color = COLORS.button;
+    this.buttons.restart.hoverColor = COLORS.buttonHover;
     this.drawButton(ctx, 'restart');
+    curY += btnH + gap;
+
+    // 4. Shop button
+    this.buttons.shopGameOver.label = `🛒 SHOP & UPGRADES`;
+    this.buttons.shopGameOver.x = (GAME_WIDTH - btnW) / 2;
+    this.buttons.shopGameOver.y = curY;
+    this.buttons.shopGameOver.width = btnW;
+    this.buttons.shopGameOver.height = btnH;
+    this.drawButton(ctx, 'shopGameOver');
 
     // Hint
     ctx.fillStyle = COLORS.text;
-    ctx.font = '400 14px Roboto, sans-serif';
-    ctx.fillText('Press Space / Enter or Tap to restart', GAME_WIDTH / 2, GAME_HEIGHT * 0.72);
+    ctx.font = '400 12.5px Roboto, sans-serif';
+    ctx.fillText('Tap button or press Space to play again', GAME_WIDTH / 2, curY + btnH + 18);
 
     ctx.globalAlpha = 1;
   }
@@ -1212,5 +1537,702 @@ export class UI {
     ctx.arcTo(x, y + h, x, y, radius);
     ctx.arcTo(x, y, x + w, y, radius);
     ctx.closePath();
+  }
+
+  /**
+   * Renders the Shop / Upgrades, Trails, Skins & Backgrounds Screen.
+   * Full modern tabbed modal showcasing:
+   * - 10-Level Power-ups & Coin Multiplier
+   * - 21 Visual Jump Trails
+   * - 21 Character Skins & Head Accessories
+   * - 20 Atmospheric Sky Backgrounds
+   */
+  drawShopMenu(
+    ctx: CanvasRenderingContext2D,
+    coins: number,
+    shop: ShopManager,
+    activeTab: 'upgrades' | 'skins' | 'trails' | 'backgrounds' = 'upgrades',
+    page: number = 0,
+  ): void {
+    // Dark blur backdrop
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Modal Card
+    const cardW = 410;
+    const cardH = 690;
+    const cardX = (GAME_WIDTH - cardW) / 2;
+    const cardY = (GAME_HEIGHT - cardH) / 2;
+
+    // Card container & shadow
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 18;
+    this.roundRectPath(ctx, cardX, cardY, cardW, cardH, 20);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Header Banner
+    const headH = 54;
+    const headGrad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY);
+    headGrad.addColorStop(0, '#6366f1');
+    headGrad.addColorStop(1, '#8b5cf6');
+    ctx.fillStyle = headGrad;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, headH, [20, 20, 0, 0]);
+    ctx.fill();
+
+    // Header Title
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 16px Roboto, sans-serif';
+    ctx.fillText('🛒 SKY SHOP & VAULT', cardX + 16, cardY + headH / 2);
+
+    // Coins Balance Badge
+    const coinBadgeW = 100;
+    const coinBadgeH = 28;
+    const coinBadgeX = cardX + cardW - coinBadgeW - 14;
+    const coinBadgeY = cardY + (headH - coinBadgeH) / 2;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+    ctx.beginPath();
+    ctx.roundRect(coinBadgeX, coinBadgeY, coinBadgeW, coinBadgeH, 14);
+    ctx.fill();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 13px Roboto, sans-serif';
+    ctx.fillText(`🪙 ${coins}`, coinBadgeX + coinBadgeW / 2, coinBadgeY + coinBadgeH / 2);
+
+    // 4 Tab Navigation Bar
+    const tabY = cardY + headH + 8;
+    const tabH = 34;
+    const tabMargin = 8;
+    const tabSpacing = 4;
+    const tabW = (cardW - tabMargin * 2 - tabSpacing * 3) / 4;
+
+    const tabs: Array<{ id: 'upgrades' | 'skins' | 'trails' | 'backgrounds'; label: string }> = [
+      { id: 'upgrades', label: '⚡ UPGRADE' },
+      { id: 'skins', label: '🥷 SKINS' },
+      { id: 'trails', label: '🌈 TRAILS' },
+      { id: 'backgrounds', label: '🌄 BACKGROUND' },
+    ];
+
+    for (let i = 0; i < tabs.length; i++) {
+      const t = tabs[i];
+      const tx = cardX + tabMargin + i * (tabW + tabSpacing);
+      const isSelected = activeTab === t.id;
+
+      ctx.fillStyle = isSelected ? '#7c3aed' : '#f1f5f9';
+      this.roundRectPath(ctx, tx, tabY, tabW, tabH, 8);
+      ctx.fill();
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = isSelected ? '#ffffff' : '#64748b';
+      ctx.font = isSelected ? 'bold 10px Roboto, sans-serif' : '600 9.5px Roboto, sans-serif';
+      ctx.fillText(t.label, tx + tabW / 2, tabY + tabH / 2);
+    }
+
+    // --- TAB CONTENTS ---
+    const contentY = tabY + tabH + 10;
+
+    if (activeTab === 'upgrades') {
+      const upgrades = [
+        {
+          id: 'magnet' as const,
+          name: '🧲 Coin Magnet',
+          desc: `Active Time: ${shop.getMagnetDuration().toFixed(2)}s (+0.25s/lv | Max 6.0s)`,
+          level: shop.magnetLevel,
+          cost: shop.magnetLevel < 10 ? shop.upgradeCosts[shop.magnetLevel] : 0,
+        },
+        {
+          id: 'jetpack' as const,
+          name: '🚀 Rocket Jetpack',
+          desc: `Flight Time: ${shop.getJetpackDuration().toFixed(2)}s (+0.25s/lv | Max 4.5s)`,
+          level: shop.jetpackLevel,
+          cost: shop.jetpackLevel < 10 ? shop.upgradeCosts[shop.jetpackLevel] : 0,
+        },
+        {
+          id: 'shield' as const,
+          name: '🛡️ Force Shield',
+          desc: `Full Lv.10 Max: +350 Bounce | Bonus: +${shop.getShieldBonusBounce()}`,
+          level: shop.shieldLevel,
+          cost: shop.shieldLevel < 10 ? shop.shieldCosts[shop.shieldLevel] : 0,
+        },
+        {
+          id: 'coin_multiplier' as const,
+          name: '🪙 2X Coin Multiplier',
+          desc: `Merchant 2X Deal: ${shop.getCoinMultiplierDuration().toFixed(2)}s (+0.25s/lv | Max 4.5s)`,
+          level: shop.coinMultiplierLevel,
+          cost: shop.coinMultiplierLevel < 10 ? shop.upgradeCosts[shop.coinMultiplierLevel] : 0,
+        },
+      ];
+
+      const rowH = 92;
+      for (let i = 0; i < upgrades.length; i++) {
+        const u = upgrades[i];
+        const rowY = contentY + i * (rowH + 8);
+        const isMax = u.level >= 10;
+        const canAfford = coins >= u.cost;
+
+        // Container card
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        this.roundRectPath(ctx, cardX + 12, rowY, cardW - 24, rowH, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        // 10 Level Segment Pips
+        const pipW = 21;
+        const pipH = 5;
+        const pipGap = 4;
+        const pipsStartX = cardX + 22;
+        const pipsY = rowY + 12;
+
+        for (let lvl = 0; lvl < 10; lvl++) {
+          const px = pipsStartX + lvl * (pipW + pipGap);
+          ctx.fillStyle = lvl < u.level ? '#10b981' : '#cbd5e1';
+          this.roundRectPath(ctx, px, pipsY, pipW, pipH, 2);
+          ctx.fill();
+        }
+
+        // Title + Level Badge
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 13px Roboto, sans-serif';
+        ctx.fillText(u.name, cardX + 22, rowY + 36);
+
+        ctx.fillStyle = '#6366f1';
+        ctx.font = 'bold 11px Roboto, sans-serif';
+        ctx.fillText(`Lv. ${u.level}/10`, cardX + cardW - 85, rowY + 36);
+
+        // Description
+        ctx.fillStyle = '#64748b';
+        ctx.font = '500 11px Roboto, sans-serif';
+        ctx.fillText(u.desc, cardX + 22, rowY + 56);
+
+        // Upgrade Action Button
+        const btnW = 115;
+        const btnH = 28;
+        const btnX = cardX + cardW - btnW - 22;
+        const btnY = rowY + 58;
+
+        ctx.fillStyle = isMax ? '#94a3b8' : canAfford ? '#16a34a' : '#cbd5e1';
+        this.roundRectPath(ctx, btnX, btnY, btnW, btnH, 6);
+        ctx.fill();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px Roboto, sans-serif';
+        ctx.fillText(isMax ? 'MAX (Lv.10) ⭐' : `UPGRADE ${u.cost} 🪙`, btnX + btnW / 2, btnY + btnH / 2);
+      }
+    } else if (activeTab === 'skins') {
+      const itemsPerPage = 4;
+      const totalPages = Math.ceil(SKINS.length / itemsPerPage);
+      const curPage = Math.max(0, Math.min(page, totalPages - 1));
+      const pageItems = SKINS.slice(curPage * itemsPerPage, (curPage + 1) * itemsPerPage);
+
+      const rowH = 78;
+      for (let i = 0; i < pageItems.length; i++) {
+        const s = pageItems[i];
+        const rowY = contentY + i * (rowH + 8);
+        const isUnlocked = shop.unlockedSkins.includes(s.id);
+        const isSelected = shop.selectedSkin === s.id;
+        const canAfford = coins >= s.cost;
+
+        ctx.fillStyle = isSelected ? '#f0fdf4' : '#f8fafc';
+        ctx.strokeStyle = isSelected ? '#22c55e' : '#e2e8f0';
+        ctx.lineWidth = isSelected ? 1.5 : 1;
+        this.roundRectPath(ctx, cardX + 12, rowY, cardW - 24, rowH, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        // Skin Avatar circle
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.arc(cardX + 38, rowY + rowH / 2, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = s.accent || '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Hat badge icon
+        ctx.font = '16px Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(s.icon, cardX + 38, rowY + rowH / 2 + 1);
+
+        // Name & Description
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 13px Roboto, sans-serif';
+        ctx.fillText(s.name, cardX + 64, rowY + 24);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '500 11px Roboto, sans-serif';
+        ctx.fillText(s.desc, cardX + 64, rowY + 44);
+
+        // Price badge if locked
+        if (!isUnlocked) {
+          ctx.fillStyle = '#d97706';
+          ctx.font = 'bold 10.5px Roboto, sans-serif';
+          ctx.fillText(`Cost: ${s.cost} 🪙`, cardX + 64, rowY + 63);
+        }
+
+        // Action button
+        const btnW = 90;
+        const btnH = 32;
+        const btnX = cardX + cardW - 12 - btnW - 10;
+        const btnY = rowY + (rowH - btnH) / 2;
+
+        ctx.fillStyle = isSelected ? '#15803d' : isUnlocked ? '#2563eb' : canAfford ? '#d97706' : '#cbd5e1';
+        this.roundRectPath(ctx, btnX, btnY, btnW, btnH, 8);
+        ctx.fill();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px Roboto, sans-serif';
+        const label = isSelected ? 'EQUIPPED' : isUnlocked ? 'EQUIP' : `${s.cost} 🪙`;
+        ctx.fillText(label, btnX + btnW / 2, btnY + btnH / 2);
+      }
+
+      // Pagination controls
+      this.drawPaginationControls(ctx, cardX, cardW, contentY + 4 * (rowH + 8) + 8, curPage, totalPages);
+    } else if (activeTab === 'trails') {
+      const itemsPerPage = 4;
+      const totalPages = Math.ceil(TRAILS.length / itemsPerPage);
+      const curPage = Math.max(0, Math.min(page, totalPages - 1));
+      const pageItems = TRAILS.slice(curPage * itemsPerPage, (curPage + 1) * itemsPerPage);
+
+      const rowH = 78;
+      for (let i = 0; i < pageItems.length; i++) {
+        const t = pageItems[i];
+        const rowY = contentY + i * (rowH + 8);
+        const isUnlocked = shop.unlockedTrails.includes(t.id);
+        const isSelected = shop.selectedTrail === t.id;
+        const canAfford = coins >= t.cost;
+
+        ctx.fillStyle = isSelected ? '#f0fdf4' : '#f8fafc';
+        ctx.strokeStyle = isSelected ? '#22c55e' : '#e2e8f0';
+        ctx.lineWidth = isSelected ? 1.5 : 1;
+        this.roundRectPath(ctx, cardX + 12, rowY, cardW - 24, rowH, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        // Trail Color Swatch Dot
+        ctx.fillStyle = t.previewColor || '#38bdf8';
+        ctx.shadowColor = t.previewColor || '#38bdf8';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(cardX + 38, rowY + rowH / 2, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.font = '14px Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(t.icon, cardX + 38, rowY + rowH / 2 + 1);
+
+        // Name & Description
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 13px Roboto, sans-serif';
+        ctx.fillText(t.name, cardX + 64, rowY + 24);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '500 11px Roboto, sans-serif';
+        ctx.fillText(t.desc, cardX + 64, rowY + 44);
+
+        if (!isUnlocked) {
+          ctx.fillStyle = '#d97706';
+          ctx.font = 'bold 10.5px Roboto, sans-serif';
+          ctx.fillText(`Cost: ${t.cost} 🪙`, cardX + 64, rowY + 63);
+        }
+
+        // Action button
+        const btnW = 90;
+        const btnH = 32;
+        const btnX = cardX + cardW - 12 - btnW - 10;
+        const btnY = rowY + (rowH - btnH) / 2;
+
+        ctx.fillStyle = isSelected ? '#15803d' : isUnlocked ? '#2563eb' : canAfford ? '#d97706' : '#cbd5e1';
+        this.roundRectPath(ctx, btnX, btnY, btnW, btnH, 8);
+        ctx.fill();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px Roboto, sans-serif';
+        const label = isSelected ? 'EQUIPPED' : isUnlocked ? 'EQUIP' : `${t.cost} 🪙`;
+        ctx.fillText(label, btnX + btnW / 2, btnY + btnH / 2);
+      }
+
+      this.drawPaginationControls(ctx, cardX, cardW, contentY + 4 * (rowH + 8) + 8, curPage, totalPages);
+    } else if (activeTab === 'backgrounds') {
+      const itemsPerPage = 4;
+      const totalPages = Math.ceil(BACKGROUNDS.length / itemsPerPage);
+      const curPage = Math.max(0, Math.min(page, totalPages - 1));
+      const pageItems = BACKGROUNDS.slice(curPage * itemsPerPage, (curPage + 1) * itemsPerPage);
+
+      const rowH = 78;
+      for (let i = 0; i < pageItems.length; i++) {
+        const bg = pageItems[i];
+        const rowY = contentY + i * (rowH + 8);
+        const isUnlocked = shop.unlockedBackgrounds.includes(bg.id);
+        const isSelected = shop.selectedBackground === bg.id;
+        const canAfford = coins >= bg.cost;
+
+        ctx.fillStyle = isSelected ? '#f0fdf4' : '#f8fafc';
+        ctx.strokeStyle = isSelected ? '#22c55e' : '#e2e8f0';
+        ctx.lineWidth = isSelected ? 1.5 : 1;
+        this.roundRectPath(ctx, cardX + 12, rowY, cardW - 24, rowH, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        // Mini gradient swatch box
+        const swatchGrad = ctx.createLinearGradient(cardX + 24, rowY + 16, cardX + 24, rowY + rowH - 16);
+        swatchGrad.addColorStop(0, bg.topColor);
+        swatchGrad.addColorStop(0.5, bg.midColor);
+        swatchGrad.addColorStop(1, bg.botColor);
+        ctx.fillStyle = swatchGrad;
+        this.roundRectPath(ctx, cardX + 24, rowY + 16, 32, rowH - 32, 6);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Icon inside swatch
+        ctx.font = '14px Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(bg.icon, cardX + 40, rowY + rowH / 2 + 1);
+
+        // Name & Description
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 13px Roboto, sans-serif';
+        ctx.fillText(bg.name, cardX + 68, rowY + 24);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '500 11px Roboto, sans-serif';
+        ctx.fillText(bg.desc, cardX + 68, rowY + 44);
+
+        if (!isUnlocked) {
+          ctx.fillStyle = '#d97706';
+          ctx.font = 'bold 10.5px Roboto, sans-serif';
+          ctx.fillText(`Cost: ${bg.cost} 🪙`, cardX + 68, rowY + 63);
+        }
+
+        // Action button
+        const btnW = 90;
+        const btnH = 32;
+        const btnX = cardX + cardW - 12 - btnW - 10;
+        const btnY = rowY + (rowH - btnH) / 2;
+
+        ctx.fillStyle = isSelected ? '#15803d' : isUnlocked ? '#2563eb' : canAfford ? '#d97706' : '#cbd5e1';
+        this.roundRectPath(ctx, btnX, btnY, btnW, btnH, 8);
+        ctx.fill();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px Roboto, sans-serif';
+        const label = isSelected ? 'ACTIVE' : isUnlocked ? 'SELECT' : `${bg.cost} 🪙`;
+        ctx.fillText(label, btnX + btnW / 2, btnY + btnH / 2);
+      }
+
+      this.drawPaginationControls(ctx, cardX, cardW, contentY + 4 * (rowH + 8) + 8, curPage, totalPages);
+    }
+
+    // Close / Back button at bottom
+    const closeW = 240;
+    const closeH = 42;
+    const closeX = (GAME_WIDTH - closeW) / 2;
+    const closeY = cardY + cardH - closeH - 14;
+
+    ctx.fillStyle = '#334155';
+    this.roundRectPath(ctx, closeX, closeY, closeW, closeH, 12);
+    ctx.fill();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13.5px Roboto, sans-serif';
+    ctx.fillText('◀  BACK TO GAME', closeX + closeW / 2, closeY + closeH / 2);
+
+    ctx.restore();
+  }
+
+  private drawPaginationControls(
+    ctx: CanvasRenderingContext2D,
+    cardX: number,
+    cardW: number,
+    py: number,
+    curPage: number,
+    totalPages: number,
+  ): void {
+    const btnW = 92;
+    const btnH = 32;
+
+    // Prev button
+    const prevX = cardX + 16;
+    ctx.fillStyle = curPage > 0 ? '#4f46e5' : '#e2e8f0';
+    this.roundRectPath(ctx, prevX, py, btnW, btnH, 8);
+    ctx.fill();
+    ctx.fillStyle = curPage > 0 ? '#ffffff' : '#94a3b8';
+    ctx.font = 'bold 12px Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('◀ PREV', prevX + btnW / 2, py + btnH / 2);
+
+    // Page indicator
+    ctx.fillStyle = '#334155';
+    ctx.font = 'bold 12.5px Roboto, sans-serif';
+    ctx.fillText(`Page ${curPage + 1} / ${totalPages}`, cardX + cardW / 2, py + btnH / 2);
+
+    // Next button
+    const nextX = cardX + cardW - btnW - 16;
+    ctx.fillStyle = curPage < totalPages - 1 ? '#4f46e5' : '#e2e8f0';
+    this.roundRectPath(ctx, nextX, py, btnW, btnH, 8);
+    ctx.fill();
+    ctx.fillStyle = curPage < totalPages - 1 ? '#ffffff' : '#94a3b8';
+    ctx.fillText('NEXT ▶', nextX + btnW / 2, py + btnH / 2);
+  }
+
+  /**
+   * Hit test for Shop screen elements.
+   * Returns action string or null.
+   */
+  handleShopClick(
+    px: number,
+    py: number,
+    activeTab: 'upgrades' | 'skins' | 'trails' | 'backgrounds' = 'upgrades',
+    page: number = 0,
+  ): string | null {
+    const cardW = 410;
+    const cardH = 690;
+    const cardX = (GAME_WIDTH - cardW) / 2;
+    const cardY = (GAME_HEIGHT - cardH) / 2;
+
+    // 1. Close button
+    const closeW = 240;
+    const closeH = 42;
+    const closeX = (GAME_WIDTH - closeW) / 2;
+    const closeY = cardY + cardH - closeH - 14;
+    if (px >= closeX - 15 && px <= closeX + closeW + 15 && py >= closeY - 10 && py <= closeY + closeH + 10) {
+      return 'close';
+    }
+
+    // 2. Tab selection bar
+    const headH = 54;
+    const tabY = cardY + headH + 8;
+    const tabH = 34;
+    const tabMargin = 8;
+    const tabSpacing = 4;
+    const tabW = (cardW - tabMargin * 2 - tabSpacing * 3) / 4;
+
+    if (py >= tabY - 8 && py <= tabY + tabH + 8) {
+      for (let i = 0; i < 4; i++) {
+        const tx = cardX + tabMargin + i * (tabW + tabSpacing);
+        if (px >= tx - 3 && px <= tx + tabW + 3) {
+          const tabNames = ['tab_upgrades', 'tab_skins', 'tab_trails', 'tab_backgrounds'];
+          return tabNames[i];
+        }
+      }
+    }
+
+    const contentY = tabY + tabH + 10;
+
+    // 3. Tab contents
+    if (activeTab === 'upgrades') {
+      const rowH = 92;
+      const actions = [
+        'upgrade_magnet',
+        'upgrade_jetpack',
+        'upgrade_shield',
+        'upgrade_coin_multiplier',
+      ];
+
+      for (let i = 0; i < actions.length; i++) {
+        const rowY = contentY + i * (rowH + 8);
+        if (px >= cardX + 10 && px <= cardX + cardW - 10 && py >= rowY - 4 && py <= rowY + rowH + 4) {
+          return actions[i];
+        }
+      }
+    } else {
+      const itemsPerPage = 4;
+      const items = activeTab === 'skins' ? SKINS : activeTab === 'trails' ? TRAILS : BACKGROUNDS;
+      const totalPages = Math.ceil(items.length / itemsPerPage);
+      const curPage = Math.max(0, Math.min(page, totalPages - 1));
+      const pageItems = items.slice(curPage * itemsPerPage, (curPage + 1) * itemsPerPage);
+
+      const rowH = 78;
+      for (let i = 0; i < pageItems.length; i++) {
+        const rowY = contentY + i * (rowH + 8);
+        if (px >= cardX + 10 && px <= cardX + cardW - 10 && py >= rowY - 4 && py <= rowY + rowH + 4) {
+          const item = pageItems[i];
+          if (activeTab === 'skins') return `skin_${item.id}`;
+          if (activeTab === 'trails') return `trail_${item.id}`;
+          if (activeTab === 'backgrounds') return `bg_${item.id}`;
+        }
+      }
+
+      // Pagination clicks - generous touch bounds
+      const paginationY = contentY + 4 * (rowH + 8) + 8;
+      if (py >= paginationY - 12 && py <= paginationY + 48) {
+        // Prev button (left 40% of pagination bar)
+        if (px >= cardX + 8 && px <= cardX + 140 && curPage > 0) {
+          return 'shop_prev_page';
+        }
+        // Next button (right 40% of pagination bar)
+        if (px >= cardX + cardW - 140 && px <= cardX + cardW - 8 && curPage < totalPages - 1) {
+          return 'shop_next_page';
+        }
+      }
+    }
+
+    return null;
+  }
+
+  getPrivacyModalLayout() {
+    const cardW = 340;
+    const cardH = 430;
+    const cardX = (GAME_WIDTH - cardW) / 2;
+    const cardY = (GAME_HEIGHT - cardH) / 2;
+
+    const viewPolicyBtn = {
+      x: cardX + 25,
+      y: cardY + 230,
+      width: cardW - 50,
+      height: 38,
+    };
+
+    const checkboxRow = {
+      x: cardX + 20,
+      y: cardY + 284,
+      width: cardW - 40,
+      height: 44,
+      boxSize: 26,
+    };
+
+    const acceptBtn = {
+      x: cardX + 25,
+      y: cardY + 348,
+      width: cardW - 50,
+      height: 50,
+    };
+
+    return { cardX, cardY, cardW, cardH, viewPolicyBtn, checkboxRow, acceptBtn };
+  }
+
+  drawPrivacyModal(ctx: CanvasRenderingContext2D, isChecked: boolean): void {
+    const { cardX, cardY, cardW, cardH, viewPolicyBtn, checkboxRow, acceptBtn } = this.getPrivacyModalLayout();
+
+    ctx.save();
+    // Dimmed background
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Card shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    this.roundRectPath(ctx, cardX + 4, cardY + 8, cardW, cardH, 20);
+    ctx.fill();
+
+    // Card background
+    ctx.fillStyle = '#ffffff';
+    this.roundRectPath(ctx, cardX, cardY, cardW, cardH, 20);
+    ctx.fill();
+
+    // Card border
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.5;
+    this.roundRectPath(ctx, cardX, cardY, cardW, cardH, 20);
+    ctx.stroke();
+
+    // Header Shield Icon & Title
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '28px sans-serif';
+    ctx.fillText('🛡️', GAME_WIDTH / 2, cardY + 34);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 22px Roboto, sans-serif';
+    ctx.fillText('PRIVACY & TERMS', GAME_WIDTH / 2, cardY + 68);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '500 13px Roboto, sans-serif';
+    ctx.fillText('Welcome to StickUp 2D!', GAME_WIDTH / 2, cardY + 92);
+
+    // Highlights Card
+    const infoW = cardW - 40;
+    const infoH = 88;
+    const infoX = cardX + 20;
+    const infoY = cardY + 114;
+
+    ctx.fillStyle = '#f8fafc';
+    this.roundRectPath(ctx, infoX, infoY, infoW, infoH, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    this.roundRectPath(ctx, infoX, infoY, infoW, infoH, 12);
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#334155';
+    ctx.font = '500 12px Roboto, sans-serif';
+    ctx.fillText('• 100% Free & Family-Friendly arcade game', infoX + 14, infoY + 22);
+    ctx.fillText('• No personal data or tracking collected', infoX + 14, infoY + 44);
+    ctx.fillText('• Rewarded Ads provided by Google AdMob', infoX + 14, infoY + 66);
+
+    // View Policy Button
+    ctx.fillStyle = '#f0f9ff';
+    this.roundRectPath(ctx, viewPolicyBtn.x, viewPolicyBtn.y, viewPolicyBtn.width, viewPolicyBtn.height, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 1.5;
+    this.roundRectPath(ctx, viewPolicyBtn.x, viewPolicyBtn.y, viewPolicyBtn.width, viewPolicyBtn.height, 10);
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#0369a1';
+    ctx.font = 'bold 13px Roboto, sans-serif';
+    ctx.fillText('📄 READ PRIVACY POLICY & TERMS ↗', GAME_WIDTH / 2, viewPolicyBtn.y + viewPolicyBtn.height / 2);
+
+    // Checkbox Row
+    const boxX = checkboxRow.x + 8;
+    const boxY = checkboxRow.y + (checkboxRow.height - checkboxRow.boxSize) / 2;
+
+    // Checkbox box
+    ctx.fillStyle = isChecked ? '#16a34a' : '#ffffff';
+    this.roundRectPath(ctx, boxX, boxY, checkboxRow.boxSize, checkboxRow.boxSize, 6);
+    ctx.fill();
+    ctx.strokeStyle = isChecked ? '#15803d' : '#94a3b8';
+    ctx.lineWidth = 2;
+    this.roundRectPath(ctx, boxX, boxY, checkboxRow.boxSize, checkboxRow.boxSize, 6);
+    ctx.stroke();
+
+    if (isChecked) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('✓', boxX + checkboxRow.boxSize / 2, boxY + checkboxRow.boxSize / 2 + 1);
+    }
+
+    // Checkbox text
+    ctx.textAlign = 'left';
+    ctx.fillStyle = isChecked ? '#0f172a' : '#475569';
+    ctx.font = 'bold 13px Roboto, sans-serif';
+    ctx.fillText('I agree to the Terms & Privacy Policy', boxX + checkboxRow.boxSize + 12, checkboxRow.y + checkboxRow.height / 2);
+
+    // Accept & Play Button
+    ctx.fillStyle = isChecked ? '#16a34a' : '#94a3b8';
+    this.roundRectPath(ctx, acceptBtn.x, acceptBtn.y, acceptBtn.width, acceptBtn.height, 14);
+    ctx.fill();
+    ctx.strokeStyle = isChecked ? '#15803d' : '#64748b';
+    ctx.lineWidth = 1.5;
+    this.roundRectPath(ctx, acceptBtn.x, acceptBtn.y, acceptBtn.width, acceptBtn.height, 14);
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 17px Roboto, sans-serif';
+    ctx.fillText(isChecked ? 'ACCEPT & PLAY  ▶' : 'CHECK BOX TO ACCEPT', GAME_WIDTH / 2, acceptBtn.y + acceptBtn.height / 2);
+
+    ctx.restore();
   }
 }

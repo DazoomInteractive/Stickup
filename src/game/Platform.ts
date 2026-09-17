@@ -97,6 +97,7 @@ export class Platform {
     if (this.type !== 'breakable' || this.broken) return;
     this.broken = true;
     this.breakTimer = 0;
+    this.dipVelocity = 120; // immediately push downward visually on crumble
   }
 
   update(dt: number): void {

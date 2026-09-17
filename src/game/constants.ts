@@ -23,28 +23,42 @@ export const PLAYER_HEIGHT = 56;
 export const PLATFORM_WIDTH = 90;
 export const PLATFORM_HEIGHT = 16;
 
-// Coin
+// Coin / Relic dimensions
 export const COIN_RADIUS = 12;
+export const RELIC_RADIUS = 14;
 export const COIN_VALUE = 1;
 
-// Generation
-export const PLATFORM_MIN_GAP = 70;   // min vertical gap between platforms
-export const PLATFORM_MAX_GAP = 130;  // max vertical gap
-export const MOVING_PLATFORM_START = 600; // height (m) where moving platforms begin
-export const BREAKABLE_PLATFORM_START = 400; // height (m) where breakable platforms begin
-export const FADING_PLATFORM_START = 800; // height (m) where fading platforms begin
-export const SPRING_SPAWN_CHANCE = 0.18; // chance a platform gets a spring on top
+// Generation & Spawns
+export const PLATFORM_MIN_GAP = 65;   // min vertical gap between platforms
+export const PLATFORM_MAX_GAP = 125;  // max vertical gap
+export const MOVING_PLATFORM_START = 45;   // height (m) where moving platforms begin
+export const BREAKABLE_PLATFORM_START = 90; // height (m) where breakable platforms begin
+export const FADING_PLATFORM_START = 180;   // height (m) where fading platforms begin
+export const SPRING_SPAWN_CHANCE = 0.22;   // 22% chance a platform gets a spring on top
 export const SPRING_BOOST_MULTIPLIER = 2.0; // spring launches player 2x higher
-export const COIN_SPAWN_CHANCE = 0.45; // chance a platform gets a coin above it
+export const RELIC_SPAWN_CHANCE = 0.36;     // 36% chance: Sparkling Diamonds (💎 Olmoslar) to collect!
+export const COIN_SPAWN_CHANCE = 0;         // Coins come from trading 💎 with Merchants!
+
+// Action & Merchant Balance
+export const MERCHANT_SPAWN_CHANCE = 0.08;  // 8% chance on solid platform after 30m
+export const MERCHANT_MIN_METER = 30;       // First merchant appears after 30m
+export const ENEMY_MIN_METER = 80;          // Enemies start appearing after 80m
+export const ENEMY_SPAWN_CHANCE = 0.10;     // 10% chance
+export const HAZARD_MIN_METER = 999999;     // Disabled unfair hazards
+export const HAZARD_INTERVAL_MIN = 999;
+export const HAZARD_INTERVAL_MAX = 999;
+export const DEATH_RELIC_KEEP_RATE = 0.50;  // Keep 50% unsold diamonds on death (50% risk penalty)
 
 // Power-up balance constants
-export const SHIELD_SPAWN_CHANCE = 0.055; // 5.5% spawn rate for Shield
-export const JETPACK_SPAWN_CHANCE = 0.035; // 3.5% spawn rate for Jetpack (rare & rewarding)
-export const JETPACK_DURATION = 3.8;       // 3.8 seconds of thruster flight
-export const JETPACK_SPEED = 1450;         // upward flight speed px/s
-export const MAGNET_SPAWN_CHANCE = 0.045;  // 4.5% spawn rate for Magnet
-export const MAGNET_DURATION = 6.5;        // 6.5 seconds of coin attraction
-export const MAGNET_RADIUS = 190;          // coin attraction radius px
+export const SHIELD_SPAWN_CHANCE = 0.055;  // 5.5% spawn rate for Shield
+export const JETPACK_SPAWN_CHANCE = 0.04;  // 4% spawn rate for Jetpack
+export const JETPACK_DURATION = 2.2;       // base 2.2s (up to 4.0s with full upgrade)
+export const JETPACK_SPEED = 1500;         // upward flight speed px/s
+export const MAGNET_SPAWN_CHANCE = 0.055;  // 5.5% spawn rate for Magnet
+export const MAGNET_DURATION = 3.6;        // base 3.6s (up to 6.0s with full upgrade)
+export const MAGNET_RADIUS = 220;          // diamond attraction radius
+export const MULTIPLIER_SPAWN_CHANCE = 0.05; // 5% spawn rate for 2X Coin Multiplier item
+export const MULTIPLIER_DURATION = 2.2;    // base 2.2s (up to 4.0s with full upgrade)
 
 // Camera
 export const CAMERA_OFFSET = 250;     // player stays this many px from bottom
@@ -77,6 +91,9 @@ export const COLORS = {
   coin: '#ffc107',
   coinDark: '#ff9800',
   coinText: '#ff8f00',
+  relic: '#c084fc',
+  relicDark: '#9333ea',
+  relicText: '#a855f7',
   text: '#37474f',
   textLight: '#e3f2fd',
   button: '#4a90d9',
@@ -102,6 +119,7 @@ export const STATE = {
   PLAYING: 'PLAYING',
   PAUSED: 'PAUSED',
   GAME_OVER: 'GAME_OVER',
+  SHOP: 'SHOP',
 } as const;
 
 export type GameState = (typeof STATE)[keyof typeof STATE];

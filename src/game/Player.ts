@@ -54,6 +54,16 @@ export class Player {
   magnetTimer = 0;
   magnetMax = MAGNET_DURATION;
 
+  hasMultiplier = false;
+  multiplierTimer = 0;
+  multiplierMax = 4.0;
+
+  // Custom Skin, Hat & Upgrades
+  skinColor = '#2b2b2b';
+  skinAccent = '#4a90d9';
+  skinGlow = 'rgba(74, 144, 217, 0)';
+  hat?: 'crown' | 'ninja_bandana' | 'visor' | 'viking_horns' | 'diver_goggles' | 'astronaut_dome' | 'pharaoh_nemes' | 'dragon_horns' | 'knight_helmet' | 'vampire_cape' | 'halo';
+
   // Callbacks
   onBounce: (() => void) | null = null;
   onSpring: (() => void) | null = null;
@@ -80,14 +90,22 @@ export class Player {
     return this.y + this.height;
   }
 
-  activateJetpack(): void {
+  activateJetpack(duration = JETPACK_DURATION): void {
     this.hasJetpack = true;
-    this.jetpackTimer = JETPACK_DURATION;
+    this.jetpackTimer = duration;
+    this.jetpackMax = duration;
   }
 
-  activateMagnet(): void {
+  activateMagnet(duration = MAGNET_DURATION): void {
     this.hasMagnet = true;
-    this.magnetTimer = MAGNET_DURATION;
+    this.magnetTimer = duration;
+    this.magnetMax = duration;
+  }
+
+  activateMultiplier(duration = 4.0): void {
+    this.hasMultiplier = true;
+    this.multiplierTimer = duration;
+    this.multiplierMax = duration;
   }
 
   update(dt: number, input: InputHandler): void {
@@ -132,6 +150,14 @@ export class Player {
       this.magnetTimer -= dt;
       if (this.magnetTimer <= 0) {
         this.hasMagnet = false;
+      }
+    }
+
+    // Multiplier timer
+    if (this.hasMultiplier) {
+      this.multiplierTimer -= dt;
+      if (this.multiplierTimer <= 0) {
+        this.hasMultiplier = false;
       }
     }
 
@@ -372,8 +398,59 @@ export class Player {
     const h = this.height;
     const headR = w * 0.22;
 
-    ctx.strokeStyle = COLORS.player;
-    ctx.fillStyle = COLORS.player;
+    // Optional Skin Glow Aura
+    if (this.skinGlow && this.skinGlow !== 'rgba(74, 144, 217, 0)') {
+      ctx.save();
+      ctx.shadowColor = this.skinGlow;
+      ctx.shadowBlur = 12;
+      ctx.strokeStyle = this.skinColor;
+      ctx.fillStyle = this.skinColor;
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Head
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.35, headR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Body
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.35 + headR);
+      ctx.lineTo(0, h * 0.15);
+      ctx.stroke();
+
+      // Arms
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.15);
+      ctx.lineTo(-w * 0.3, h * 0.0);
+      ctx.moveTo(0, -h * 0.15);
+      ctx.lineTo(w * 0.3, h * 0.0);
+      ctx.stroke();
+
+      // Legs
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.15);
+      ctx.lineTo(-w * 0.25, h * 0.5);
+      ctx.moveTo(0, h * 0.15);
+      ctx.lineTo(w * 0.25, h * 0.5);
+      ctx.stroke();
+
+      // Accent dot on head
+      ctx.fillStyle = this.skinAccent;
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.35, headR * 0.38, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hat / Accessories on Glowing Stickman
+      this.drawHat(ctx, headR, h);
+
+      ctx.restore();
+      return;
+    }
+
+    ctx.strokeStyle = this.skinColor || COLORS.player;
+    ctx.fillStyle = this.skinColor || COLORS.player;
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -406,10 +483,214 @@ export class Player {
     ctx.stroke();
 
     // Accent dot on head for a touch of color
-    ctx.fillStyle = COLORS.playerAccent;
+    ctx.fillStyle = this.skinAccent || COLORS.playerAccent;
     ctx.beginPath();
     ctx.arc(0, -h * 0.35, headR * 0.35, 0, Math.PI * 2);
     ctx.fill();
+
+    // Hat / Accessories on Standard Stickman
+    this.drawHat(ctx, headR, h);
+  }
+
+  private drawHat(ctx: CanvasRenderingContext2D, headR: number, h: number): void {
+    if (!this.hat) return;
+
+    if (this.hat === 'crown') {
+      const crownY = -h * 0.35 - headR - 1;
+      ctx.save();
+      ctx.fillStyle = '#f59e0b';
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-headR * 0.9, crownY);
+      ctx.lineTo(-headR * 0.9, crownY - 9);
+      ctx.lineTo(-headR * 0.45, crownY - 4);
+      ctx.lineTo(0, crownY - 11);
+      ctx.lineTo(headR * 0.45, crownY - 4);
+      ctx.lineTo(headR * 0.9, crownY - 9);
+      ctx.lineTo(headR * 0.9, crownY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Jewels on crown
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(0, crownY - 8, 1.8, 0, Math.PI * 2);
+      ctx.arc(-headR * 0.7, crownY - 6.5, 1.4, 0, Math.PI * 2);
+      ctx.arc(headR * 0.7, crownY - 6.5, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (this.hat === 'ninja_bandana') {
+      const bandY = -h * 0.35 - headR * 0.2;
+      ctx.save();
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(-headR * 1.05, bandY, headR * 2.1, 4.5);
+
+      // Trailing ribbons behind head
+      const wave = Math.sin(this.thrusterAnim * 0.5) * 4;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(headR * 0.9, bandY + 2);
+      ctx.quadraticCurveTo(headR * 1.5, bandY + 4 + wave, headR * 2.0, bandY + 8 - wave);
+      ctx.moveTo(headR * 0.9, bandY + 2);
+      ctx.quadraticCurveTo(headR * 1.4, bandY + 8 - wave, headR * 1.9, bandY + 14 + wave);
+      ctx.stroke();
+      ctx.restore();
+    } else if (this.hat === 'visor') {
+      const visorY = -h * 0.35 - 1;
+      ctx.save();
+      ctx.fillStyle = '#f43f5e';
+      ctx.shadowColor = '#f43f5e';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.roundRect(-headR * 1.05, visorY, headR * 2.1, 5, 2.5);
+      ctx.fill();
+      ctx.restore();
+    } else if (this.hat === 'viking_horns') {
+      const hornY = -h * 0.35 - headR * 0.3;
+      ctx.save();
+      // Horn helmet band
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(-headR * 1.05, hornY, headR * 2.1, 4);
+      // Left horn
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-headR * 0.9, hornY + 2);
+      ctx.quadraticCurveTo(-headR * 1.6, hornY - 6, -headR * 1.4, hornY - 14);
+      ctx.stroke();
+      // Right horn
+      ctx.beginPath();
+      ctx.moveTo(headR * 0.9, hornY + 2);
+      ctx.quadraticCurveTo(headR * 1.6, hornY - 6, headR * 1.4, hornY - 14);
+      ctx.stroke();
+      ctx.restore();
+    } else if (this.hat === 'diver_goggles') {
+      const goggleY = -h * 0.35 - 1;
+      ctx.save();
+      ctx.fillStyle = '#06b6d4';
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(-headR * 0.45, goggleY, headR * 0.4, 0, Math.PI * 2);
+      ctx.arc(headR * 0.45, goggleY, headR * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // Snorkel tube
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(headR * 0.9, goggleY);
+      ctx.lineTo(headR * 1.25, goggleY - 10);
+      ctx.stroke();
+      ctx.restore();
+    } else if (this.hat === 'astronaut_dome') {
+      const headCenterY = -h * 0.35;
+      ctx.save();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, headCenterY, headR * 1.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // Visor reflection shine
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, headCenterY, headR * 1.05, -Math.PI * 0.7, -Math.PI * 0.3);
+      ctx.stroke();
+      ctx.restore();
+    } else if (this.hat === 'pharaoh_nemes') {
+      const nemesY = -h * 0.35 - headR;
+      ctx.save();
+      ctx.fillStyle = '#eab308';
+      ctx.strokeStyle = '#1e3a8a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-headR * 1.3, nemesY + headR * 1.8);
+      ctx.lineTo(-headR * 0.9, nemesY);
+      ctx.lineTo(headR * 0.9, nemesY);
+      ctx.lineTo(headR * 1.3, nemesY + headR * 1.8);
+      ctx.lineTo(headR * 0.8, nemesY + headR * 1.8);
+      ctx.lineTo(0, nemesY + headR * 0.5);
+      ctx.lineTo(-headR * 0.8, nemesY + headR * 1.8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Golden Uraeus cobra on forehead
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(0, nemesY + 1, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (this.hat === 'dragon_horns') {
+      const hornY = -h * 0.35 - headR * 0.3;
+      ctx.save();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.shadowColor = '#f59e0b';
+      ctx.shadowBlur = 6;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      // Left sharp curved horn
+      ctx.beginPath();
+      ctx.moveTo(-headR * 0.7, hornY);
+      ctx.quadraticCurveTo(-headR * 1.8, hornY - 8, -headR * 1.3, hornY - 16);
+      ctx.stroke();
+      // Right sharp curved horn
+      ctx.beginPath();
+      ctx.moveTo(headR * 0.7, hornY);
+      ctx.quadraticCurveTo(headR * 1.8, hornY - 8, headR * 1.3, hornY - 16);
+      ctx.stroke();
+      ctx.restore();
+    } else if (this.hat === 'knight_helmet') {
+      const helmY = -h * 0.35 - headR * 0.7;
+      ctx.save();
+      ctx.fillStyle = '#64748b';
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(-headR * 1.1, helmY, headR * 2.2, headR * 1.6);
+      // Visor slit
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-headR * 0.85, -h * 0.35 - 2, headR * 1.7, 4);
+      // Red plume on top
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(0, helmY - 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (this.hat === 'vampire_cape') {
+      ctx.save();
+      const wave = Math.sin(this.thrusterAnim * 0.4) * 3;
+      ctx.fillStyle = '#7f1d1d';
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-headR * 1.1, -h * 0.15);
+      ctx.lineTo(-headR * 1.8, h * 0.35 + wave);
+      ctx.lineTo(-headR * 0.4, h * 0.2);
+      ctx.lineTo(headR * 0.4, h * 0.2);
+      ctx.lineTo(headR * 1.8, h * 0.35 - wave);
+      ctx.lineTo(headR * 1.1, -h * 0.15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    } else if (this.hat === 'halo') {
+      const haloY = -h * 0.35 - headR - 8;
+      ctx.save();
+      ctx.strokeStyle = '#fde047';
+      ctx.shadowColor = '#fde047';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(0, haloY, headR * 1.1, headR * 0.38, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   reset(x: number, y: number): void {
@@ -429,5 +710,7 @@ export class Player {
     this.jetpackTimer = 0;
     this.hasMagnet = false;
     this.magnetTimer = 0;
+    this.hasMultiplier = false;
+    this.multiplierTimer = 0;
   }
 }

@@ -14,6 +14,19 @@ export class AudioManager {
     } catch {
       this.muted = false;
     }
+
+    // Auto-unlock WebAudio context on first user interaction for Android WebViews & browsers
+    if (typeof window !== 'undefined') {
+      const unlock = () => {
+        this.resume();
+        window.removeEventListener('click', unlock);
+        window.removeEventListener('touchstart', unlock);
+        window.removeEventListener('keydown', unlock);
+      };
+      window.addEventListener('click', unlock, { passive: true });
+      window.addEventListener('touchstart', unlock, { passive: true });
+      window.addEventListener('keydown', unlock, { passive: true });
+    }
   }
 
   private ensureContext(): AudioContext | null {
@@ -114,6 +127,22 @@ export class AudioManager {
   playMagnetCollect(): void {
     this.tone(440, 0.1, 'triangle', 0.14, 880);
     window.setTimeout(() => this.tone(659.25, 0.14, 'triangle', 0.16, 1318.5), 70);
+  }
+
+  /** Sound when player sells relics to real-time merchant (cash register chime). */
+  playTrade(): void {
+    this.tone(987.77, 0.08, 'triangle', 0.22, 1318.5); // B5 -> E6
+    window.setTimeout(() => this.tone(1318.5, 0.18, 'triangle', 0.24, 1975.5), 60); // E6 -> B6
+  }
+
+  /** Sound when player stomps an enemy from above. */
+  playEnemyStomp(): void {
+    this.tone(200, 0.12, 'square', 0.22, 400);
+  }
+
+  /** Low buzz tone when player cannot afford an item or action is invalid. */
+  playError(): void {
+    this.tone(180, 0.15, 'sawtooth', 0.18, 120);
   }
 
   /** Joyful fanfare for breaking a personal high score record. */

@@ -1,0 +1,33 @@
+{
+  "name": "StickUp 2D",
+  "short_name": "StickUp",
+  "description": "StickUp 2D - Official v2.0.0 by DazzomInteractive. A high-flying vertical jumping adventure.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#6bb6e8",
+  "theme_color": "#6bb6e8",
+  "categories": ["games", "arcade"],
+  "icons": [
+    {
+      "src": "./pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./maskable-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

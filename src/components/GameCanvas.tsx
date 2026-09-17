@@ -102,12 +102,8 @@ export default function GameCanvas() {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        // On mobile: seamlessly match the sky blue. On PC/Itch: stylish dark gaming backdrop
-        background: {
-          xs: 'linear-gradient(180deg, #a3d4f5 0%, #6bb6e8 55%, #2e7bc7 100%)',
-          md: 'radial-gradient(ellipse at center, #1e293b 0%, #0f172a 65%, #020617 100%)',
-        },
-        backgroundColor: { xs: '#6bb6e8', md: '#0f172a' },
+        background: 'radial-gradient(ellipse at center, #111827 0%, #090d16 100%)',
+        backgroundColor: '#090d16',
         overflow: 'hidden',
         p: { xs: 0, md: 2 },
       }}
@@ -116,14 +112,14 @@ export default function GameCanvas() {
       <Box
         sx={{
           position: 'relative',
-          aspectRatio: '9 / 16',
+          width: { xs: '100%', md: 'auto' },
           height: { xs: '100%', md: 'auto' },
+          aspectRatio: { xs: 'unset', md: '9 / 16' },
+          maxWidth: { xs: '100vw', md: '450px' },
           maxHeight: { xs: '100dvh', md: 'min(94dvh, 880px)' },
-          width: { xs: 'auto', md: 'auto' },
-          maxWidth: { xs: '100vw', md: '500px' },
           boxShadow: {
             xs: 'none',
-            md: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 40px rgba(59, 130, 246, 0.25)',
+            md: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 40px rgba(99, 102, 241, 0.25)',
           },
           borderRadius: { xs: 0, md: '20px' },
           border: { xs: 'none', md: '2px solid rgba(255, 255, 255, 0.14)' },
@@ -143,7 +139,7 @@ export default function GameCanvas() {
             display: 'block',
             width: '100%',
             height: '100%',
-            objectFit: 'contain',
+            objectFit: 'fill',
             touchAction: 'none',
             outline: 'none',
           }}
