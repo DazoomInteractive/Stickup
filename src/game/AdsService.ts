@@ -11,13 +11,13 @@ export type AdRewardType = 'recover_diamonds' | 'revive';
  */
 export const ADMOB_CONFIG = {
   // Code 1: Rewarded Ad Unit ID for RESCUE 🚀
-  RESCUE_AD_UNIT_ID: '',
+  RESCUE_AD_UNIT_ID: 'ca-app-pub-6542029020781525/3727907220',
 
   // Code 2: Rewarded Ad Unit ID for RECOVER 💎
-  RECOVER_AD_UNIT_ID: '',
+  RECOVER_AD_UNIT_ID: 'ca-app-pub-6542029020781525/9273456955',
 
   // Optional App ID (e.g. ca-app-pub-xxxxxxxxxxxxxxxx~yyyyyyyyyy)
-  APP_ID: '',
+  APP_ID: 'ca-app-pub-6542029020781525~1338739570',
 };
 
 declare global {
