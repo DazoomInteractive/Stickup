@@ -1,6 +1,6 @@
 {
-  "name": "StickUp 2D Game",
-  "description": "StickUp 2D - Official v2.0.0 by DazzomInteractive. A high-flying vertical jumping adventure.",
+  "name": "StickUp 2D",
+  "description": "StickUp 2D - Official v2.0.0 by DazzomInteractive. High-flying vertical platform jumping adventure rewritten for Android with Jetpack Compose.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

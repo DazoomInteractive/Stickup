@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">StickUp 2D</string>
+    <string name="play">PLAY</string>
+    <string name="shop">SHOP</string>
+    <string name="pause">PAUSE</string>
+    <string name="resume">RESUME</string>
+    <string name="game_over">GAME OVER</string>
+    <string name="retry">PLAY AGAIN</string>
+    <string name="high_score">Best: %1$d m</string>
+    <string name="current_score">%1$d m</string>
+    <string name="diamonds">Diamonds: %1$d</string>
+    <string name="coins">Coins: %1$d</string>
+    <string name="merchant_trade">Trade 💎 for %1$d 🪙</string>
+    <string name="privacy_policy">Privacy Policy</string>
+</resources>

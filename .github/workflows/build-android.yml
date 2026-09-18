@@ -1,0 +1,82 @@
+name: Build Android APK and AAB
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Web app
+        run: npm run build
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Capacitor
+        run: |
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Generate Release Keystore
+        run: |
+          cd android/app
+          if [ ! -f release.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore release.keystore \
+              -alias stickup \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass stickup123 \
+              -keypass stickup123 \
+              -dname "CN=DazoomInteractive, OU=Games, O=Dazoom, L=Tashkent, C=UZ"
+          fi
+
+      - name: Make Gradlew Executable
+        run: |
+          cd android
+          chmod +x ./gradlew
+
+      - name: Build Signed AAB and APK
+        run: |
+          cd android
+          ./gradlew bundleRelease assembleRelease --stacktrace
+
+      - name: Upload Release Keystore (Kalit fayli)
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-keystore
+          path: android/app/release.keystore
+
+      - name: Upload AAB Artifact (Play Store uchun)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+
+      - name: Upload APK Artifact (Test uchun)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
