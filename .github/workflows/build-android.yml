@@ -62,12 +62,22 @@ jobs:
       - name: Make Gradlew Executable
         run: |
           cd android
-          chmod +x ./gradlew
+          if [ ! -f "gradlew" ]; then
+            echo "Gradlew not found, generating wrapper..."
+            gradle wrapper --gradle-version 8.14.3 || true
+          fi
+          if [ -f "gradlew" ]; then
+            chmod +x gradlew
+          fi
 
       - name: Build Signed AAB and APK
         run: |
           cd android
-          ./gradlew bundleRelease assembleRelease --stacktrace
+          if [ -x "./gradlew" ]; then
+            ./gradlew bundleRelease assembleRelease --stacktrace
+          else
+            gradle bundleRelease assembleRelease --stacktrace
+          fi
 
       - name: Upload Release Keystore (Kalit fayli)
         uses: actions/upload-artifact@v4
