@@ -19,10 +19,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Web app
         run: npm run build
@@ -33,9 +32,16 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Ensure Gradle Wrapper Configuration
+        run: |
+          mkdir -p android/gradle/wrapper
+          printf "distributionBase=GRADLE_USER_HOME\ndistributionPath=wrapper/dists\ndistributionUrl=https\\\://services.gradle.org/distributions/gradle-8.14.3-all.zip\nnetworkTimeout=10000\nvalidateDistributionUrl=true\nzipStoreBase=GRADLE_USER_HOME\nzipStorePath=wrapper/dists\n" > android/gradle/wrapper/gradle-wrapper.properties
+
       - name: Setup Capacitor
         run: |
-          npx cap add android || true
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           npx cap sync android
 
       - name: Generate Release Keystore
