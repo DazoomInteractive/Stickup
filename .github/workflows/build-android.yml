@@ -35,7 +35,8 @@ jobs:
       - name: Ensure Gradle Wrapper Configuration
         run: |
           mkdir -p android/gradle/wrapper
-          printf "distributionBase=GRADLE_USER_HOME\ndistributionPath=wrapper/dists\ndistributionUrl=https\\\://services.gradle.org/distributions/gradle-8.14.3-all.zip\nnetworkTimeout=10000\nvalidateDistributionUrl=true\nzipStoreBase=GRADLE_USER_HOME\nzipStorePath=wrapper/dists\n" > android/gradle/wrapper/gradle-wrapper.properties
+          printf "distributionBase=GRADLE_USER_HOME\ndistributionPath=wrapper/dists\ndistributionUrl=https\\\://services.gradle.org/distributions/gradle-8.9-all.zip\nnetworkTimeout=10000\nvalidateDistributionUrl=true\nzipStoreBase=GRADLE_USER_HOME\nzipStorePath=wrapper/dists\n" > android/gradle/wrapper/gradle-wrapper.properties
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
       - name: Setup Capacitor
         run: |
@@ -64,7 +65,7 @@ jobs:
           cd android
           if [ ! -f "gradlew" ]; then
             echo "Gradlew not found, generating wrapper..."
-            gradle wrapper --gradle-version 8.14.3 || true
+            gradle wrapper --gradle-version 8.9 || true
           fi
           if [ -f "gradlew" ]; then
             chmod +x gradlew
@@ -74,9 +75,9 @@ jobs:
         run: |
           cd android
           if [ -x "./gradlew" ]; then
-            ./gradlew bundleRelease assembleRelease --stacktrace
+            ./gradlew :app:bundleRelease :app:assembleRelease --stacktrace
           else
-            gradle bundleRelease assembleRelease --stacktrace
+            gradle :app:bundleRelease :app:assembleRelease --stacktrace
           fi
 
       - name: Upload Release Keystore (Kalit fayli)
