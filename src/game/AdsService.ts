@@ -204,7 +204,15 @@ export class AdsService {
 
     // 1. Real AdMob plugin when running as a native Android app
     if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
-      this.showRealAdMobRewardedAd(adUnitId, onSuccess, onFailure);
+      this.showRealAdMobRewardedAd(
+        adUnitId,
+        onSuccess,
+        (err) => {
+          console.warn('[AdsService] Native AdMob could not fill or failed, falling back to overlay:', err);
+          // Fallback to overlay so player is NEVER stuck and rewards still work!
+          this.showPwaAdOverlay(type, onSuccess, onFailure);
+        }
+      );
       return;
     }
 
