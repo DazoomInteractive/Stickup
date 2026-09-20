@@ -81,6 +81,15 @@ jobs:
             chmod +x gradlew
           fi
 
+      - name: TEMP Print Keystore Base64
+        run: |
+          echo "===== COPY EVERYTHING BETWEEN THE TWO MARKER LINES BELOW ====="
+          echo "-----BEGIN-----"
+          base64 -w0 android/app/release.keystore
+          echo ""
+          echo "-----END-----"
+          echo "===== DO NOT SHARE THIS TEXT WITH ANYONE ====="
+
       - name: Build Signed AAB and APK
         run: |
           cd android

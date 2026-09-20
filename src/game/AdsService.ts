@@ -1,3 +1,6 @@
+import { AdMob, RewardAdPluginEvents, type RewardAdOptions, type AdMobRewardItem } from '@capacitor-community/admob';
+import { Capacitor } from '@capacitor/core';
+
 /**
  * AdsService - Handles Rewarded Ad integration for PWA Builder / Android APK / Uptodown
  * Strictly disabled when running on Itch.io or in Itch builds.
@@ -23,19 +26,10 @@ export const ADMOB_CONFIG = {
 declare global {
   interface Window {
     __ITCH_BUILD__?: boolean;
-    // Native AdMob Bridge hooks for Android APK / Capacitor / Cordova / WebToApp
     AndroidAdsBridge?: {
       showRewardedAd: (rewardType: string, adUnitId?: string) => void;
       isAdReady?: (rewardType?: string) => boolean;
       hasInternet?: () => boolean;
-    };
-    admob?: {
-      rewarded?: {
-        show: (options?: { adId?: string }) => Promise<void>;
-      };
-    };
-    AdMob?: {
-      showRewardVideoAd?: (options?: { adId?: string }) => Promise<void>;
     };
     onAdMobRewardSuccess?: (rewardType: string) => void;
     onAdMobRewardFailed?: (reason: string) => void;
@@ -45,9 +39,9 @@ declare global {
 export class AdsService {
   private static instance: AdsService;
   private adInProgress = false;
+  private admobInitialized = false;
 
   private constructor() {
-    // Setup global window callback for native Android AdMob wrapper
     if (typeof window !== 'undefined') {
       window.onAdMobRewardSuccess = (rewardType: string) => {
         this.adInProgress = false;
@@ -67,32 +61,20 @@ export class AdsService {
     return AdsService.instance;
   }
 
-  /**
-   * Check if device is connected to the internet.
-   * Ads and recovery rewards require active internet connection.
-   */
   isOnline(): boolean {
     if (typeof navigator !== 'undefined' && 'onLine' in navigator) {
       if (!navigator.onLine) return false;
     }
-    // Check native bridge if available
     if (typeof window !== 'undefined' && window.AndroidAdsBridge && typeof window.AndroidAdsBridge.hasInternet === 'function') {
       return window.AndroidAdsBridge.hasInternet();
     }
     return true;
   }
 
-  /**
-   * Check if running in Itch.io environment.
-   * If on Itch.io or Itch build, all ads must remain strictly hidden and disabled.
-   */
   isItchPlatform(): boolean {
     if (typeof window === 'undefined') return true;
-
-    // Check custom Itch build flag
     if (window.__ITCH_BUILD__ === true) return true;
 
-    // Check query parameters (e.g. ?platform=itch or ?itch=1)
     const search = (window.location.search || '').toLowerCase();
     if (
       search.includes('platform=itch') ||
@@ -103,18 +85,16 @@ export class AdsService {
       return true;
     }
 
-    // Check hostnames and domains used by Itch.io games
     const hostname = (window.location.hostname || '').toLowerCase();
     if (
       hostname.includes('itch.io') ||
       hostname.includes('itch.zone') ||
-      hostname.includes('hwcdn.net') || // Itch.io CDN hosting HTML5 iframes
+      hostname.includes('hwcdn.net') ||
       hostname.includes('itch')
     ) {
       return true;
     }
 
-    // Check document referrer (when embedded in an Itch iframe or game page)
     try {
       const ref = (document.referrer || '').toLowerCase();
       if (
@@ -129,7 +109,6 @@ export class AdsService {
       // ignore security restrictions
     }
 
-    // Check window ancestors if accessible
     try {
       if (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
         for (let i = 0; i < window.location.ancestorOrigins.length; i++) {
@@ -146,10 +125,6 @@ export class AdsService {
     return false;
   }
 
-  /**
-   * Ads are active in PWA / APK / Uptodown / Standalone mobile environments.
-   * Ads are strictly HIDDEN and DISABLED on Itch.io.
-   */
   isAdsEnabled(): boolean {
     if (this.isItchPlatform()) {
       return false;
@@ -157,10 +132,53 @@ export class AdsService {
     return true;
   }
 
-  /**
-   * Play a Rewarded Ad with fallback simulated interactive modal if native AdMob bridge is pending.
-   * Requires active internet connection.
-   */
+  private async ensureAdMobInitialized(): Promise<void> {
+    if (this.admobInitialized) return;
+    await AdMob.initialize();
+    this.admobInitialized = true;
+  }
+
+  private async showRealAdMobRewardedAd(
+    adUnitId: string,
+    onSuccess: () => void,
+    onFailure?: (error: string) => void,
+  ): Promise<void> {
+    try {
+      await this.ensureAdMobInitialized();
+
+      let rewardGranted = false;
+      const rewardedListener = await AdMob.addListener(
+        RewardAdPluginEvents.Rewarded,
+        (_reward: AdMobRewardItem) => {
+          rewardGranted = true;
+          rewardedListener.remove();
+          this.adInProgress = false;
+          onSuccess();
+        }
+      );
+
+      const options: RewardAdOptions = {
+        adId: adUnitId,
+        isTesting: false,
+      };
+
+      await AdMob.prepareRewardVideoAd(options);
+      await AdMob.showRewardVideoAd();
+
+      setTimeout(() => {
+        if (!rewardGranted) {
+          rewardedListener.remove();
+          this.adInProgress = false;
+          if (onFailure) onFailure('ADMOB_NO_REWARD');
+        }
+      }, 60000);
+    } catch (err) {
+      this.adInProgress = false;
+      console.warn('[AdsService] Real AdMob error:', err);
+      if (onFailure) onFailure('ADMOB_FAILED');
+    }
+  }
+
   showRewardedAd(
     type: AdRewardType,
     onSuccess: () => void,
@@ -171,7 +189,6 @@ export class AdsService {
       return;
     }
 
-    // Must have internet connection to load and watch ads
     if (!this.isOnline()) {
       if (onFailure) onFailure('NO_INTERNET');
       return;
@@ -185,7 +202,13 @@ export class AdsService {
         ? ADMOB_CONFIG.RECOVER_AD_UNIT_ID
         : ADMOB_CONFIG.RESCUE_AD_UNIT_ID;
 
-    // 1. Check if Native Android AdMob bridge is injected (e.g. Capacitor / TWA / Cordova APK for Uptodown)
+    // 1. Real AdMob plugin when running as a native Android app
+    if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
+      this.showRealAdMobRewardedAd(adUnitId, onSuccess, onFailure);
+      return;
+    }
+
+    // 2. Legacy native bridge (kept for backward compatibility)
     if (
       typeof window !== 'undefined' &&
       window.AndroidAdsBridge &&
@@ -214,29 +237,10 @@ export class AdsService {
       }
     }
 
-    // 2. Check Capacitor / Cordova community AdMob plugin
-    if (typeof window !== 'undefined' && window.admob?.rewarded?.show) {
-      window.admob.rewarded
-        .show({ adId: adUnitId || undefined })
-        .then(() => {
-          this.adInProgress = false;
-          onSuccess();
-        })
-        .catch((err) => {
-          this.adInProgress = false;
-          console.warn('[AdsService] Cordova AdMob error:', err);
-          if (onFailure) onFailure('ADMOB_FAILED');
-        });
-      return;
-    }
-
-    // 3. High-performance PWA / Web Ad playback overlay
+    // 3. Web / non-native fallback overlay
     this.showPwaAdOverlay(type, onSuccess, onFailure);
   }
 
-  /**
-   * Sleek in-game rewarded video overlay for PWA Builder / Mobile Web / Uptodown APK
-   */
   private showPwaAdOverlay(
     type: AdRewardType,
     onSuccess: () => void,
@@ -273,7 +277,7 @@ export class AdsService {
     modal.style.padding = '20px';
     modal.style.boxSizing = 'border-box';
 
-    let countdown = 3; // 3-second quick rewarded prompt for snappy user experience
+    let countdown = 3;
     let timerId: number | null = null;
 
     modal.innerHTML = `
@@ -282,11 +286,10 @@ export class AdsService {
         <div style="font-size: 19px; font-weight: 800; color: #38bdf8; margin-bottom: 8px;">${titleText}</div>
         <div style="font-size: 13px; color: #cbd5e1; line-height: 1.4; margin-bottom: 18px;">${descText}</div>
         
-        <!-- Ad Simulation Banner -->
         <div style="background: rgba(30, 41, 59, 0.9); border: 1px dashed #64748b; border-radius: 12px; padding: 14px; margin-bottom: 18px;">
-          <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-bottom: 4px;">AdMob / PWA Sponsor Ad</div>
-          <div style="font-size: 15px; font-weight: 700; color: #facc15;">⭐ Sky Jumper Pro Upgrades ⭐</div>
-          <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Uptodown & Mobile APK Edition</div>
+          <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-bottom: 4px;">Sponsor Ad</div>
+          <div style="font-size: 15px; font-weight: 700; color: #facc15;">⭐ StickUp Pro Upgrades ⭐</div>
+          <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Web Preview Edition</div>
         </div>
 
         <div id="ad-timer-label" style="font-size: 15px; font-weight: 700; color: #4ade80; margin-bottom: 14px;">

@@ -4,4 +4,5 @@
     <string name="title_activity_main">StickUp 2D</string>
     <string name="package_name">com.dazoom.stickup</string>
     <string name="custom_url_scheme">com.dazoom.stickup</string>
+    <string name="admob_app_id">ca-app-pub-6542029020781525~1338739570</string>
 </resources>
