@@ -249,6 +249,7 @@ export class GameEngine {
     this.boundTouchStart = (e: TouchEvent) => {
       if (e.touches && e.touches.length > 0) {
         const touch = e.touches[0];
+        e.preventDefault();
         this.handleTapAt(touch.clientX, touch.clientY);
       }
     };
