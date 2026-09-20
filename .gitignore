@@ -21,4 +21,12 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+# Android & Keystores
+*.keystore
+*.jks
+release.keystore
+debug.keystore
+.env
+.env.local
+.gradle/
+build/
