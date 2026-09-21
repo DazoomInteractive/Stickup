@@ -24,7 +24,7 @@ import {
 import { AdsService } from './AdsService';
 
 export const PRIVACY_POLICY_URL =
-  'https://telegra.ph/Sky-Jumper-2D---Privacy-Policy--Terms-of-Service-09-15';
+  'https://telegra.ph/StickUp---Privacy-Policy--Terms-09-21';
 
 export function openPrivacyPolicy(): void {
   if (typeof window !== 'undefined') {
