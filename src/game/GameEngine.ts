@@ -81,7 +81,7 @@ export class GameEngine {
   private isPrivacyModalOpen = false;
   private privacyCheckboxChecked = false;
 
-  private state: GameState = STATE.SPLASH;
+  private state: GameState = STATE.MAIN_MENU;
   private splashElapsed = 0;
   private height = 0;
   private coinCount = 0;
