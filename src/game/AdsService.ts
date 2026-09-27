@@ -1,55 +1,45 @@
-import { AdMob, RewardAdPluginEvents, type RewardAdOptions, type AdMobRewardItem } from '@capacitor-community/admob';
-import { Capacitor } from '@capacitor/core';
+// ============================================================
+// Sky Jumper - Ads Service
+// Configured for Start.io (StartApp) integration & Aptoide distribution
+// ============================================================
 
-/**
- * AdsService - Handles Rewarded Ad integration for PWA Builder / Android APK / Uptodown
- * Strictly disabled when running on Itch.io or in Itch builds.
- */
+export type AdRewardType = 'recover_diamonds' | 'rescue_flight';
 
-export type AdRewardType = 'recover_diamonds' | 'revive';
+export interface StartIoConfig {
+  APP_ID: string;
+}
 
-/**
- * AdMob Configuration for Android APK / Uptodown
- * Insert your 2 AdMob codes here:
- */
-export const ADMOB_CONFIG = {
-  // Code 1: Rewarded Ad Unit ID for RESCUE 🚀
-  RESCUE_AD_UNIT_ID: 'ca-app-pub-6542029020781525/3727907220',
-
-  // Code 2: Rewarded Ad Unit ID for RECOVER 💎
-  RECOVER_AD_UNIT_ID: 'ca-app-pub-6542029020781525/9273456955',
-
-  // Optional App ID (e.g. ca-app-pub-xxxxxxxxxxxxxxxx~yyyyyyyyyy)
-  APP_ID: 'ca-app-pub-6542029020781525~1338739570',
+export const STARTIO_CONFIG: StartIoConfig = {
+  // Replace with your 9-digit Start.io App ID once registered at portal.start.io
+  APP_ID: '200000000',
 };
 
 declare global {
   interface Window {
-    __ITCH_BUILD__?: boolean;
     AndroidAdsBridge?: {
-      showRewardedAd: (rewardType: string, adUnitId?: string) => void;
-      isAdReady?: (rewardType?: string) => boolean;
       hasInternet?: () => boolean;
+      showRewardedAd?: (rewardType: string) => void;
+      showStartIoRewarded?: (rewardType: string) => void;
     };
-    onAdMobRewardSuccess?: (rewardType: string) => void;
-    onAdMobRewardFailed?: (reason: string) => void;
+    onStartIoRewardSuccess?: (rewardType: string) => void;
+    onStartIoRewardFailed?: (reason: string) => void;
+    __ITCH_BUILD__?: boolean;
   }
 }
 
 export class AdsService {
   private static instance: AdsService;
   private adInProgress = false;
-  private admobInitialized = false;
 
   private constructor() {
     if (typeof window !== 'undefined') {
-      window.onAdMobRewardSuccess = (rewardType: string) => {
+      window.onStartIoRewardSuccess = (rewardType: string) => {
         this.adInProgress = false;
-        console.log(`[AdsService] Native AdMob Reward Granted: ${rewardType}`);
+        console.log(`[AdsService] Start.io Reward Granted: ${rewardType}`);
       };
-      window.onAdMobRewardFailed = (reason: string) => {
+      window.onStartIoRewardFailed = (reason: string) => {
         this.adInProgress = false;
-        console.warn(`[AdsService] Native AdMob Failed: ${reason}`);
+        console.warn(`[AdsService] Start.io Reward Failed: ${reason}`);
       };
     }
   }
@@ -62,121 +52,17 @@ export class AdsService {
   }
 
   isOnline(): boolean {
-    if (typeof navigator !== 'undefined' && 'onLine' in navigator) {
-      if (!navigator.onLine) return false;
+    if (typeof navigator !== 'undefined' && 'onLine' in navigator && !navigator.onLine) {
+      return false;
     }
-    if (typeof window !== 'undefined' && window.AndroidAdsBridge && typeof window.AndroidAdsBridge.hasInternet === 'function') {
+    if (
+      typeof window !== 'undefined' &&
+      window.AndroidAdsBridge &&
+      typeof window.AndroidAdsBridge.hasInternet === 'function'
+    ) {
       return window.AndroidAdsBridge.hasInternet();
     }
     return true;
-  }
-
-  isItchPlatform(): boolean {
-    if (typeof window === 'undefined') return true;
-    if (window.__ITCH_BUILD__ === true) return true;
-
-    const search = (window.location.search || '').toLowerCase();
-    if (
-      search.includes('platform=itch') ||
-      search.includes('itch=true') ||
-      search.includes('itch=1') ||
-      search.includes('target=itch')
-    ) {
-      return true;
-    }
-
-    const hostname = (window.location.hostname || '').toLowerCase();
-    if (
-      hostname.includes('itch.io') ||
-      hostname.includes('itch.zone') ||
-      hostname.includes('hwcdn.net') ||
-      hostname.includes('itch')
-    ) {
-      return true;
-    }
-
-    try {
-      const ref = (document.referrer || '').toLowerCase();
-      if (
-        ref.includes('itch.io') ||
-        ref.includes('itch.zone') ||
-        ref.includes('hwcdn.net') ||
-        ref.includes('itch')
-      ) {
-        return true;
-      }
-    } catch {
-      // ignore security restrictions
-    }
-
-    try {
-      if (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
-        for (let i = 0; i < window.location.ancestorOrigins.length; i++) {
-          const origin = window.location.ancestorOrigins[i].toLowerCase();
-          if (origin.includes('itch.io') || origin.includes('itch.zone') || origin.includes('hwcdn.net')) {
-            return true;
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
-
-    return false;
-  }
-
-  isAdsEnabled(): boolean {
-    if (this.isItchPlatform()) {
-      return false;
-    }
-    return true;
-  }
-
-  private async ensureAdMobInitialized(): Promise<void> {
-    if (this.admobInitialized) return;
-    await AdMob.initialize();
-    this.admobInitialized = true;
-  }
-
-  private async showRealAdMobRewardedAd(
-    adUnitId: string,
-    onSuccess: () => void,
-    onFailure?: (error: string) => void,
-  ): Promise<void> {
-    try {
-      await this.ensureAdMobInitialized();
-
-      let rewardGranted = false;
-      const rewardedListener = await AdMob.addListener(
-        RewardAdPluginEvents.Rewarded,
-        (_reward: AdMobRewardItem) => {
-          rewardGranted = true;
-          rewardedListener.remove();
-          this.adInProgress = false;
-          onSuccess();
-        }
-      );
-
-      const options: RewardAdOptions = {
-        adId: adUnitId,
-        isTesting: false,
-      };
-
-      await AdMob.prepareRewardVideoAd(options);
-      await AdMob.showRewardVideoAd();
-
-      setTimeout(() => {
-        if (!rewardGranted) {
-          rewardedListener.remove();
-          this.adInProgress = false;
-          if (onFailure) onFailure('ADMOB_NO_REWARD');
-        }
-      }, 60000);
-    } catch (err) {
-      this.adInProgress = false;
-      console.warn('[AdsService] Real AdMob error:', err);
-      if (onFailure) onFailure('ADMOB_FAILED');
-    }
   }
 
   showRewardedAd(
@@ -184,11 +70,6 @@ export class AdsService {
     onSuccess: () => void,
     onFailure?: (error: string) => void,
   ): void {
-    if (!this.isAdsEnabled()) {
-      if (onFailure) onFailure('ADS_DISABLED');
-      return;
-    }
-
     if (!this.isOnline()) {
       if (onFailure) onFailure('NO_INTERNET');
       return;
@@ -197,59 +78,37 @@ export class AdsService {
     if (this.adInProgress) return;
     this.adInProgress = true;
 
-    const adUnitId =
-      type === 'recover_diamonds'
-        ? ADMOB_CONFIG.RECOVER_AD_UNIT_ID
-        : ADMOB_CONFIG.RESCUE_AD_UNIT_ID;
+    // 1. Android Native Start.io Bridge
+    if (typeof window !== 'undefined' && window.AndroidAdsBridge) {
+      const prevSuccess = window.onStartIoRewardSuccess;
+      const prevFailed = window.onStartIoRewardFailed;
 
-    // 1. Real AdMob plugin when running as a native Android app
-    if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
-      this.showRealAdMobRewardedAd(
-        adUnitId,
-        onSuccess,
-        (err) => {
-          console.warn('[AdsService] Native AdMob could not fill or failed, falling back to overlay:', err);
-          // Fallback to overlay so player is NEVER stuck and rewards still work!
-          this.showPwaAdOverlay(type, onSuccess, onFailure);
-        }
-      );
-      return;
-    }
+      window.onStartIoRewardSuccess = (rewardType: string) => {
+        this.adInProgress = false;
+        if (prevSuccess) prevSuccess(rewardType);
+        onSuccess();
+      };
 
-    // 2. Legacy native bridge (kept for backward compatibility)
-    if (
-      typeof window !== 'undefined' &&
-      window.AndroidAdsBridge &&
-      typeof window.AndroidAdsBridge.showRewardedAd === 'function'
-    ) {
-      try {
-        const prevSuccess = window.onAdMobRewardSuccess;
-        const prevFailed = window.onAdMobRewardFailed;
+      window.onStartIoRewardFailed = (reason: string) => {
+        this.adInProgress = false;
+        if (prevFailed) prevFailed(reason);
+        if (onFailure) onFailure(reason);
+      };
 
-        window.onAdMobRewardSuccess = (rewardType: string) => {
-          this.adInProgress = false;
-          if (prevSuccess) prevSuccess(rewardType);
-          onSuccess();
-        };
-
-        window.onAdMobRewardFailed = (reason: string) => {
-          this.adInProgress = false;
-          if (prevFailed) prevFailed(reason);
-          if (onFailure) onFailure(reason);
-        };
-
-        window.AndroidAdsBridge.showRewardedAd(type, adUnitId);
+      if (typeof window.AndroidAdsBridge.showStartIoRewarded === 'function') {
+        window.AndroidAdsBridge.showStartIoRewarded(type);
         return;
-      } catch (err) {
-        console.warn('[AdsService] Native AdMob bridge error, falling back to overlay:', err);
+      } else if (typeof window.AndroidAdsBridge.showRewardedAd === 'function') {
+        window.AndroidAdsBridge.showRewardedAd(type);
+        return;
       }
     }
 
-    // 3. Web / non-native fallback overlay
-    this.showPwaAdOverlay(type, onSuccess, onFailure);
+    // 2. Fallback in-game overlay
+    this.showWebAdOverlay(type, onSuccess, onFailure);
   }
 
-  private showPwaAdOverlay(
+  private showWebAdOverlay(
     type: AdRewardType,
     onSuccess: () => void,
     onFailure?: (error: string) => void,
@@ -261,6 +120,7 @@ export class AdsService {
       type === 'recover_diamonds'
         ? '💎 Recover 100% Diamonds'
         : '🚀 Revive & Rescue Flight';
+
     const descText =
       type === 'recover_diamonds'
         ? 'Watch a short video to recover all lost diamonds safely into your bank!'
@@ -295,9 +155,8 @@ export class AdsService {
         <div style="font-size: 13px; color: #cbd5e1; line-height: 1.4; margin-bottom: 18px;">${descText}</div>
         
         <div style="background: rgba(30, 41, 59, 0.9); border: 1px dashed #64748b; border-radius: 12px; padding: 14px; margin-bottom: 18px;">
-          <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-bottom: 4px;">Sponsor Ad</div>
+          <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-bottom: 4px;">Sponsored Ad</div>
           <div style="font-size: 15px; font-weight: 700; color: #facc15;">⭐ StickUp Pro Upgrades ⭐</div>
-          <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Web Preview Edition</div>
         </div>
 
         <div id="ad-timer-label" style="font-size: 15px; font-weight: 700; color: #4ade80; margin-bottom: 14px;">
@@ -330,7 +189,7 @@ export class AdsService {
         if (countdown > 0) {
           timerLabel.textContent = `Reward in: ${countdown}s...`;
         } else {
-          timerLabel.textContent = `✅ Reward Granted!`;
+          timerLabel.textContent = '✅ Reward Granted!';
           timerLabel.style.color = '#22c55e';
         }
       }

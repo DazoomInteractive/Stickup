@@ -24,7 +24,7 @@ import {
 import { AdsService } from './AdsService';
 
 export const PRIVACY_POLICY_URL =
-  'https://telegra.ph/StickUp---Privacy-Policy--Terms-09-21';
+  'https://telegra.ph/Privacy-Policy--Terms-of-Service-for-StickUp-09-27';
 
 export function openPrivacyPolicy(): void {
   if (typeof window !== 'undefined') {
@@ -572,22 +572,17 @@ export class UI {
     // Created & Developed by:
     ctx.fillStyle = '#94a3b8';
     ctx.font = '500 12px Roboto, sans-serif';
-    ctx.fillText('Created & Developed by:', GAME_WIDTH / 2, cardY + 70);
+    ctx.fillText('Created & Developed by:', GAME_WIDTH / 2, cardY + 80);
 
     // DazzomInteractive
     ctx.fillStyle = '#f8fafc';
     ctx.font = '900 17px Roboto, sans-serif';
-    ctx.fillText('DazzomInteractive', GAME_WIDTH / 2, cardY + 95);
-
-    // Built with the assistance of AI (Google AI Studio)
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = '500 12px Roboto, sans-serif';
-    ctx.fillText('Built with the assistance of AI (Google AI Studio)', GAME_WIDTH / 2, cardY + 128);
+    ctx.fillText('DazzomInteractive', GAME_WIDTH / 2, cardY + 112);
 
     // © 2026 DazzomInteractive.
     ctx.fillStyle = '#38bdf8';
     ctx.font = 'bold 12px Roboto, sans-serif';
-    ctx.fillText('© 2026 DazzomInteractive.', GAME_WIDTH / 2, cardY + 158);
+    ctx.fillText('© 2026 DazzomInteractive.', GAME_WIDTH / 2, cardY + 150);
 
     // 6. Progress bar (fills in 2.2 seconds, waits for user tap)
     const progW = 260;
@@ -1272,7 +1267,7 @@ export class UI {
     // Hint
     ctx.fillStyle = COLORS.text;
     ctx.font = '400 12.5px Roboto, sans-serif';
-    ctx.fillText('Tap button or press Space to play again', GAME_WIDTH / 2, curY + btnH + 18);
+    ctx.fillText('Tap button to play again', GAME_WIDTH / 2, curY + btnH + 18);
 
     ctx.globalAlpha = 1;
   }
@@ -2177,7 +2172,7 @@ export class UI {
     ctx.font = '500 12px Roboto, sans-serif';
     ctx.fillText('• 100% Free & Family-Friendly arcade game', infoX + 14, infoY + 22);
     ctx.fillText('• No personal data or tracking collected', infoX + 14, infoY + 44);
-    ctx.fillText('• Rewarded Ads provided by Google AdMob', infoX + 14, infoY + 66);
+    ctx.fillText('• Rewarded Ads provided by Start.io', infoX + 14, infoY + 66);
 
     // View Policy Button
     ctx.fillStyle = '#f0f9ff';
