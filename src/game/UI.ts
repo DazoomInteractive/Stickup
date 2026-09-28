@@ -113,7 +113,7 @@ export class UI {
       onClick: () => {},
     };
 
-    // Rewarded Ad Buttons for Mobile / PWA (Strictly hidden on Itch.io)
+    // Buttons configuration
     this.buttons.recoverDiamonds = {
       label: '📺 RECOVER 100% 💎',
       x: (GAME_WIDTH - 250) / 2,

@@ -1,22 +1,8 @@
 /**
- * AdsService - Handles Rewarded Ad integration for PWA Builder / Android APK
- * Strictly disabled - fake ads and overlays removed.
+ * AdsService - Handles game state rewards (disabled).
  */
 
 export type AdRewardType = 'recover_diamonds' | 'revive';
-
-declare global {
-  interface Window {
-    __ITCH_BUILD__?: boolean;
-    AndroidAdsBridge?: {
-      showRewardedAd: (rewardType: string) => void;
-      isAdReady?: (rewardType?: string) => boolean;
-      hasInternet?: () => boolean;
-    };
-    onStartIoRewardSuccess?: (rewardType: string) => void;
-    onStartIoRewardFailed?: (reason: string) => void;
-  }
-}
 
 export class AdsService {
   private static instance: AdsService;
@@ -47,7 +33,7 @@ export class AdsService {
     onFailure?: (error: string) => void,
   ): void {
     if (onFailure) {
-      onFailure('ADS_DISABLED');
+      onFailure('DISABLED');
     }
   }
 }

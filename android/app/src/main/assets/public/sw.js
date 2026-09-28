@@ -1,14 +1,13 @@
 // Service Worker for StickUp 2D
-// Enables full offline caching for PWA & APK wrappers (PWABuilder / TWA)
-
+// Enables offline caching for the app
 const CACHE_NAME = 'stickup-v2-cache';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './favicon.svg',
-  './pwa-192x192.png',
-  './pwa-512x512.png',
+  './icon-192x192.png',
+  './icon-512x512.png',
   './maskable-icon-512x512.png'
 ];
 
@@ -32,14 +31,11 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event: Network-first with fallback to Cache (or Stale-While-Revalidate for offline support)
+// Fetch event: Network-first with fallback to Cache
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
   if (event.request.method !== 'GET') return;
-
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // Return cached asset if offline or found, while updating in background
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
@@ -51,13 +47,11 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // If offline and request fails, fallback to index.html if navigating
           if (event.request.mode === 'navigate') {
             return caches.match('./index.html') || cachedResponse;
           }
           return cachedResponse;
         });
-
       return cachedResponse || fetchPromise;
     })
   );
