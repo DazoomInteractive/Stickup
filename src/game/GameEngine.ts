@@ -31,6 +31,12 @@ import {
   MULTIPLIER_SPAWN_CHANCE,
   PIXELS_PER_METER,
   PLAYER_WIDTH,
+  HAZARD_MIN_METER,
+  HAZARD_INTERVAL_MIN,
+  HAZARD_INTERVAL_MAX,
+  MAX_HEARTS,
+  HEART_SPAWN_START_METER,
+  HEART_SPAWN_CHANCE,
 } from './constants';
 import { Player } from './Player';
 import { Platform, type PlatformType } from './Platform';
@@ -40,7 +46,7 @@ import { Enemy } from './Enemy';
 import { Arrow } from './Arrow';
 import { FallingHazard } from './FallingHazard';
 import { Coin } from './Coin';
-import { Shield } from './Shield';
+import { Shield, HeartPickup } from './Shield';
 import { Jetpack } from './Jetpack';
 import { Magnet } from './Magnet';
 import { CoinMultiplierItem } from './CoinMultiplierItem';
@@ -64,7 +70,11 @@ export class GameEngine {
   private enemies: Enemy[] = [];
   private arrows: Arrow[] = [];
   private hazards: FallingHazard[] = [];
+  private hazardTimer = 12;
   private shields: Shield[] = [];
+  private heartPickups: HeartPickup[] = [];
+  private hearts: number = MAX_HEARTS;
+  private maxHearts: number = MAX_HEARTS;
   private jetpacks: Jetpack[] = [];
   private magnets: Magnet[] = [];
   private multipliers: CoinMultiplierItem[] = [];
@@ -103,7 +113,9 @@ export class GameEngine {
   private shopActiveTab: 'upgrades' | 'skins' | 'trails' | 'backgrounds' = 'upgrades';
   private shopPage = 0;
   private persistentCoins = 0;
+  private persistentDiamonds = 0;
   private static readonly BANKED_COINS_KEY = 'stickup_banked_coins';
+  private static readonly BANKED_DIAMONDS_KEY = 'stickup_banked_diamonds_v1';
 
   onStateChange: ((state: GameState) => void) | null = null;
 
@@ -271,6 +283,7 @@ export class GameEngine {
     this.privacyCheckboxChecked = false;
 
     this.loadPersistentCoins();
+    this.loadPersistentDiamonds();
     this.applyPlayerCustomization();
     this.applyBackgroundCustomization();
   }
@@ -428,7 +441,10 @@ export class GameEngine {
     this.enemies = [];
     this.arrows = [];
     this.hazards = [];
+    this.hazardTimer = HAZARD_INTERVAL_MIN + Math.random() * (HAZARD_INTERVAL_MAX - HAZARD_INTERVAL_MIN);
     this.shields = [];
+    this.heartPickups = [];
+    this.hearts = this.maxHearts;
     this.jetpacks = [];
     this.magnets = [];
     this.multipliers = [];
@@ -457,6 +473,7 @@ export class GameEngine {
     if (this.relicCount > 0) {
       this.sessionSavedRelics = Math.ceil(this.relicCount * DEATH_RELIC_KEEP_RATE);
       this.sessionLostRelics = this.relicCount - this.sessionSavedRelics;
+      this.addDiamonds(this.sessionSavedRelics);
     } else {
       this.sessionSavedRelics = 0;
       this.sessionLostRelics = 0;
@@ -499,6 +516,7 @@ export class GameEngine {
       this.maybeSpawnCoin(platform);
       this.maybeSpawnEnemy(platform);
       this.maybeSpawnShield(platform);
+      this.maybeSpawnHeart(platform);
       this.maybeSpawnJetpack(platform);
       this.maybeSpawnMagnet(platform);
       this.maybeSpawnMultiplier(platform);
@@ -644,6 +662,17 @@ export class GameEngine {
     }
   }
 
+  private maybeSpawnHeart(platform: Platform): void {
+    if (this.height < HEART_SPAWN_START_METER) return;
+    if (platform.type === 'breakable' || platform.type === 'fading' || platform.type === 'spring') return;
+    const chance = this.hearts < this.maxHearts ? HEART_SPAWN_CHANCE * 1.6 : HEART_SPAWN_CHANCE;
+    if (Math.random() < chance) {
+      this.heartPickups.push(
+        new HeartPickup(platform.x + platform.width / 2, platform.y - 30, platform),
+      );
+    }
+  }
+
   private spawnPlatformsAbove(): void {
     const topScreenWorldY = this.camera.y - 100;
     while (this.highestPlatformY > topScreenWorldY - PLATFORM_MAX_GAP) {
@@ -658,6 +687,7 @@ export class GameEngine {
       this.maybeSpawnCoin(platform);
       this.maybeSpawnEnemy(platform);
       this.maybeSpawnShield(platform);
+      this.maybeSpawnHeart(platform);
       this.maybeSpawnJetpack(platform);
       this.maybeSpawnMagnet(platform);
       this.maybeSpawnMultiplier(platform);
@@ -677,12 +707,58 @@ export class GameEngine {
     this.arrows = this.arrows.filter((a) => a.active && a.y < bottomWorldY && a.y > this.camera.y - 200);
     this.hazards = this.hazards.filter((h) => h.active && h.y < bottomWorldY);
     this.shields = this.shields.filter((s) => !s.collected && s.y < bottomWorldY);
+    this.heartPickups = this.heartPickups.filter((h) => !h.collected && h.y < bottomWorldY);
     this.jetpacks = this.jetpacks.filter((j) => !j.collected && j.y < bottomWorldY);
     this.magnets = this.magnets.filter((m) => !m.collected && m.y < bottomWorldY);
     this.multipliers = this.multipliers.filter((m) => !m.collected && m.y < bottomWorldY);
   }
 
+  private spawnFallingHazard(): void {
+    // Target near player X with random offset
+    const offsetX = (Math.random() - 0.5) * 160;
+    const targetX = Math.max(35, Math.min(GAME_WIDTH - 35, this.player.centerX + offsetX));
+    const startY = this.camera.y - 40;
+    const hazard = new FallingHazard(targetX, startY);
+    hazard.warningTimer = 1.0; // 1 second advance warning at top of screen
+    this.hazards.push(hazard);
+    this.audio.playError(); // Alert audio cue
+    this.triggerHaptic(25);
+  }
+
   // ---- Collision ----
+
+  private takeDamage(reason: string): void {
+    if (this.player.isInvulnerable() || this.player.hasJetpack) return;
+
+    if (this.player.hasShield) {
+      this.player.hasShield = false;
+      this.player.vy = -1400;
+      this.audio.playShieldBreak();
+      this.camera.shake(10, 0.35);
+      const sx = this.player.centerX;
+      const sy = this.camera.worldToScreenY(this.player.centerY);
+      this.vfx.spawnShieldBurst(sx, sy, true);
+      this.vfx.spawnFloatingText(sx, sy, '🛡️ SHIELD DEFENDED!', '#38bdf8');
+      this.triggerHaptic([30, 40, 50]);
+      return;
+    }
+
+    this.hearts--;
+    this.camera.shake(12, 0.42);
+    this.triggerHaptic([40, 50, 70]);
+    this.audio.playError();
+    const sx = this.player.centerX;
+    const sy = this.camera.worldToScreenY(this.player.centerY);
+
+    if (this.hearts > 0) {
+      this.player.makeInvulnerable(2.0);
+      this.player.vy = -1250;
+      this.vfx.spawnFloatingText(sx, sy, `💔 -1 HEART! (${this.hearts}/${this.maxHearts})`, '#ef4444');
+    } else {
+      this.vfx.spawnFloatingText(sx, sy, '💔 0 HEARTS LEFT!', '#ef4444');
+      this.gameOver();
+    }
+  }
 
   private checkCollisions(dt: number): void {
     // Only collide when falling
@@ -752,9 +828,59 @@ export class GameEngine {
       const dx = this.player.centerX - m.x;
       const dy = this.player.centerY - m.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      // Touch merchant to sell all collected diamonds for his current price!
+      // Touch merchant to sell diamonds for coins OR trade for rare shards!
       if (dist < 48) {
-        if (this.relicCount > 0) {
+        if (m.isShardMerchant && m.shardOffer) {
+          const offer = m.shardOffer;
+          const totalDiamonds = this.relicCount + this.persistentDiamonds;
+          if (totalDiamonds >= offer.requiredDiamonds) {
+            m.sold = true;
+            let cost = offer.requiredDiamonds;
+            if (this.relicCount >= cost) {
+              this.relicCount -= cost;
+            } else {
+              cost -= this.relicCount;
+              this.relicCount = 0;
+              this.persistentDiamonds = Math.max(0, this.persistentDiamonds - cost);
+              this.savePersistentDiamonds();
+            }
+
+            let unlocked = false;
+            let totalShards = 0;
+            if (offer.type === 'background') {
+              const res = this.shop.addBgShards(offer.id, offer.shardsGiven);
+              unlocked = res.unlocked;
+              totalShards = res.total;
+            } else {
+              const res = this.shop.addSkinShards(offer.id, offer.shardsGiven);
+              unlocked = res.unlocked;
+              totalShards = res.total;
+            }
+
+            this.player.bounce();
+            this.player.vy = -1250;
+            this.audio.playTrade();
+            this.camera.shake(8, 0.3);
+            const sx = m.x;
+            const sy = this.camera.worldToScreenY(m.y);
+            this.vfx.spawnSparkle(sx, sy);
+            this.vfx.spawnSparkle(sx - 15, sy - 15);
+            this.vfx.spawnSparkle(sx + 15, sy - 15);
+            this.vfx.spawnFloatingText(sx, sy - 25, `+${offer.shardsGiven} 🧩 ${offer.name.toUpperCase()}!`, '#ec4899');
+            if (unlocked) {
+              this.vfx.spawnFloatingText(sx, sy - 50, '🎉 FULLY UNLOCKED!', '#4ade80');
+            }
+            this.triggerHaptic([40, 50, 70]);
+          } else if (this.player.vy > 0) {
+            this.player.bounce();
+            this.player.vy = -950;
+            this.audio.playButton();
+            const sx = m.x;
+            const sy = this.camera.worldToScreenY(m.y);
+            this.vfx.spawnFloatingText(sx, sy - 25, `NEED: ${offer.requiredDiamonds} 💎! (You have: ${totalDiamonds} 💎)`, '#ef4444');
+            this.triggerHaptic(20);
+          }
+        } else if (this.relicCount > 0) {
           m.sold = true;
           const soldCount = this.relicCount;
           const is2x = this.player.hasMultiplier;
@@ -835,9 +961,7 @@ export class GameEngine {
             this.vfx.spawnFloatingText(sx, sy, '🛡️ SHIELD DEFENDED!', '#38bdf8');
             this.triggerHaptic([30, 40, 50]);
           } else {
-            // Defeated by enemy
-            this.camera.shake(12, 0.45);
-            this.gameOver();
+            this.takeDamage('enemy');
             return;
           }
         }
@@ -869,8 +993,7 @@ export class GameEngine {
           this.vfx.spawnFloatingText(sx, sy, '🛡️ SHIELD SAVED ROCK!', '#38bdf8');
           this.triggerHaptic([30, 45, 60]);
         } else {
-          this.camera.shake(15, 0.5);
-          this.gameOver();
+          this.takeDamage('hazard');
           return;
         }
       }
@@ -919,8 +1042,7 @@ export class GameEngine {
           this.vfx.spawnFloatingText(sx, sy, '🛡️ SHIELD DEFENDED!', '#38bdf8');
           this.triggerHaptic([20, 30, 40]);
         } else {
-          this.camera.shake(12, 0.45);
-          this.gameOver();
+          this.takeDamage('arrow');
           return;
         }
       }
@@ -941,6 +1063,33 @@ export class GameEngine {
         this.vfx.spawnShieldBurst(sx, sy, false);
         this.vfx.spawnFloatingText(sx, sy, '🛡️ SHIELD!', '#38bdf8');
         this.triggerHaptic(25);
+      }
+    }
+
+    // Heart Pickups (❤️ Jon to'ldirish)
+    for (const hp of this.heartPickups) {
+      if (hp.collected) continue;
+      const dx = this.player.centerX - hp.x;
+      const dy = this.player.centerY - hp.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < hp.radius + this.player.width * 0.45) {
+        hp.collected = true;
+        const sx = hp.x;
+        const sy = this.camera.worldToScreenY(hp.y);
+        if (this.hearts < this.maxHearts) {
+          this.hearts++;
+          this.audio.playShieldCollect();
+          this.vfx.spawnSparkle(sx, sy);
+          this.vfx.spawnFloatingText(sx, sy, `+1 ❤️ HEART! (${this.hearts}/${this.maxHearts})`, '#ef4444');
+          this.triggerHaptic([20, 30, 40]);
+        } else {
+          this.coinCount += 10;
+          this.addCoins(10);
+          this.audio.playCoin();
+          this.vfx.spawnSparkle(sx, sy);
+          this.vfx.spawnFloatingText(sx, sy, '+10 🪙 FULL HEARTS BONUS!', '#f59e0b');
+          this.triggerHaptic(15);
+        }
       }
     }
 
@@ -1083,13 +1232,25 @@ export class GameEngine {
 
       for (const p of this.platforms) p.update(dt);
       for (const r of this.relics) r.update(dt);
+      for (const hp of this.heartPickups) hp.update(dt);
       for (const m of this.merchants) m.update(dt);
       for (const c of this.coins) c.update(dt);
       for (const e of this.enemies) e.update(dt);
+      for (const a of this.arrows) a.update(dt);
+      for (const h of this.hazards) h.update(dt, this.camera.y);
       for (const s of this.shields) s.update(dt);
       for (const j of this.jetpacks) j.update(dt);
       for (const m of this.magnets) m.update(dt);
       for (const m of this.multipliers) m.update(dt);
+
+      // Periodic Falling Boulders (⚠️ Adrenaline Rocks start after 400m)
+      if (this.height >= HAZARD_MIN_METER) {
+        this.hazardTimer -= dt;
+        if (this.hazardTimer <= 0) {
+          this.hazardTimer = HAZARD_INTERVAL_MIN + Math.random() * (HAZARD_INTERVAL_MAX - HAZARD_INTERVAL_MIN);
+          this.spawnFallingHazard();
+        }
+      }
 
       // Jetpack continuous thruster exhaust
       if (this.player.hasJetpack) {
@@ -1170,18 +1331,27 @@ export class GameEngine {
           this.vfx.spawnShieldBurst(sx, sy, true);
           this.vfx.spawnFloatingText(sx, sy, '🛡️ SHIELD SAVED!', '#38bdf8');
           this.triggerHaptic([30, 40, 60]);
-        } else {
-          // Melted by rising lava
+        } else if (!this.player.isInvulnerable()) {
+          this.hearts--;
           this.audio.playLavaBurn();
           this.camera.shake(14, 0.5);
           const sx = this.player.centerX;
           const sy = this.camera.worldToScreenY(this.player.centerY);
           this.vfx.spawnLavaEmber(sx, sy);
-          this.gameOver();
+          this.triggerHaptic([40, 60, 80]);
+          if (this.hearts > 0) {
+            this.player.makeInvulnerable(2.2);
+            this.player.vy = -1600;
+            this.lava.worldY = this.player.y + GAME_HEIGHT + 240;
+            this.vfx.spawnFloatingText(sx, sy, `🔥 LAVA! -1 HEART (${this.hearts}/${this.maxHearts})`, '#ef4444');
+          } else {
+            this.vfx.spawnFloatingText(sx, sy, '💔 0 HEARTS LEFT!', '#ef4444');
+            this.gameOver();
+          }
         }
       }
 
-      // Game over or Shield rescue: player fell below the bottom edge of the camera view
+      // Game over or Heart/Shield rescue: player fell below the bottom edge of the camera view
       if (this.player.y > this.camera.y + GAME_HEIGHT) {
         if (this.player.hasShield) {
           // Shield rescues player from falling off screen!
@@ -1196,7 +1366,26 @@ export class GameEngine {
           this.vfx.spawnFloatingText(sx, sy, '🛡️ SHIELD SAVED!', '#38bdf8');
           this.triggerHaptic([30, 40, 60]);
         } else {
-          this.gameOver();
+          this.hearts--;
+          this.camera.shake(14, 0.45);
+          this.triggerHaptic([40, 60, 80]);
+          this.audio.playError();
+          if (this.hearts > 0) {
+            // Rescue player to a safe platform with invulnerability!
+            this.player.makeInvulnerable(2.2);
+            this.player.x = (GAME_WIDTH - this.player.width) / 2;
+            this.player.y = this.camera.y + GAME_HEIGHT * 0.55;
+            this.player.vy = -1400;
+            const safePlatform = new Platform((GAME_WIDTH - PLATFORM_WIDTH) / 2, this.player.y + 60, 'static');
+            this.platforms.push(safePlatform);
+            this.lava.worldY = this.player.y + GAME_HEIGHT + 240;
+            const sx = this.player.centerX;
+            const sy = this.camera.worldToScreenY(this.player.centerY);
+            this.vfx.spawnFloatingText(sx, sy, `💔 FELL DOWN! -1 HEART (${this.hearts}/${this.maxHearts})`, '#ef4444');
+          } else {
+            this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.5, '💔 0 HEARTS LEFT!', '#ef4444');
+            this.gameOver();
+          }
         }
       }
     }
@@ -1220,6 +1409,7 @@ export class GameEngine {
         this.ui.drawShopMenu(
           this.ctx,
           this.persistentCoins,
+          this.persistentDiamonds,
           this.shop,
           this.shopActiveTab,
           this.shopPage,
@@ -1285,6 +1475,12 @@ export class GameEngine {
       s.draw(this.ctx, s.x, screenY);
     }
 
+    for (const hp of this.heartPickups) {
+      const screenY = this.camera.worldToScreenY(hp.y);
+      if (screenY < -50 || screenY > GAME_HEIGHT + 50) continue;
+      hp.draw(this.ctx, hp.x, screenY);
+    }
+
     for (const j of this.jetpacks) {
       const screenY = this.camera.worldToScreenY(j.y);
       if (screenY < -50 || screenY > GAME_HEIGHT + 50) continue;
@@ -1337,6 +1533,8 @@ export class GameEngine {
         this.player.magnetTimer,
         this.player.hasMultiplier,
         this.player.multiplierTimer,
+        this.hearts,
+        this.maxHearts,
       );
     }
 
@@ -1371,6 +1569,7 @@ export class GameEngine {
       this.ui.drawShopMenu(
         this.ctx,
         this.persistentCoins,
+        this.persistentDiamonds,
         this.shop,
         this.shopActiveTab,
         this.shopPage,
@@ -1669,6 +1868,28 @@ export class GameEngine {
     this.savePersistentCoins();
   }
 
+  private loadPersistentDiamonds(): void {
+    try {
+      const stored = localStorage.getItem(GameEngine.BANKED_DIAMONDS_KEY) || localStorage.getItem('stickup_banked_diamonds');
+      this.persistentDiamonds = stored !== null ? parseInt(stored, 10) || 0 : 0;
+    } catch {
+      this.persistentDiamonds = 0;
+    }
+  }
+
+  private savePersistentDiamonds(): void {
+    try {
+      localStorage.setItem(GameEngine.BANKED_DIAMONDS_KEY, this.persistentDiamonds.toString());
+    } catch {
+      // ignore
+    }
+  }
+
+  private addDiamonds(amount: number): void {
+    this.persistentDiamonds += amount;
+    this.savePersistentDiamonds();
+  }
+
   private openShop(): void {
     this.isShopOpen = true;
     this.shopPage = 0;
@@ -1794,7 +2015,60 @@ export class GameEngine {
     // Skins (21)
     if (action.startsWith('skin_')) {
       const skinId = action.replace('skin_', '');
+      const skin = SKINS.find(s => s.id === skinId);
       const alreadyUnlocked = this.shop.unlockedSkins.includes(skinId);
+
+      if (alreadyUnlocked) {
+        this.shop.selectSkin(skinId);
+        this.audio.playTrade();
+        this.applyPlayerCustomization();
+        this.vfx.spawnSparkle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4);
+        this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, 'SKIN EQUIPPED! 🎭', '#22c55e');
+        this.triggerHaptic(25);
+        return;
+      }
+
+      // If skin requires shards
+      if (skin && skin.requiredShards) {
+        const curShards = this.shop.getSkinShards(skinId);
+        if (curShards >= skin.requiredShards) {
+          this.shop.unlockSkinByShards(skinId);
+          this.audio.playVictory();
+          this.applyPlayerCustomization();
+          this.vfx.spawnSparkle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4);
+          this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, '👑 NEW SKIN UNLOCKED! 🎉', '#ec4899');
+          this.triggerHaptic([30, 40, 60]);
+          return;
+        }
+
+        // Exchange diamonds for shards
+        const diamondCost = skin.diamondExchangeCost || 50;
+        const shardsPerExchange = skin.shardsPerExchange || 1;
+        if (this.persistentDiamonds >= diamondCost) {
+          this.persistentDiamonds -= diamondCost;
+          this.savePersistentDiamonds();
+          const { total, unlocked } = this.shop.addSkinShards(skinId, shardsPerExchange);
+          this.audio.playTrade();
+          this.vfx.spawnSparkle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4);
+          if (unlocked) {
+            this.shop.selectSkin(skinId);
+            this.applyPlayerCustomization();
+            this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, `🎉 ${skin.name} UNLOCKED! 👑`, '#ec4899');
+            this.triggerHaptic([30, 50, 70]);
+          } else {
+            this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, `+${shardsPerExchange} 🧩 SHARD OBTAINED! (${total}/${skin.requiredShards})`, '#ec4899');
+            this.triggerHaptic(30);
+          }
+          return;
+        } else {
+          this.audio.playError();
+          this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, `Need: ${diamondCost} 💎 (You have: ${this.persistentDiamonds} 💎)`, '#ef4444');
+          this.triggerHaptic(40);
+          return;
+        }
+      }
+
+      // Standard coins purchase
       const res = this.shop.buyOrSelectSkin(skinId, this.persistentCoins);
       if (res.success) {
         this.persistentCoins = res.newCoins;
@@ -1802,12 +2076,7 @@ export class GameEngine {
         this.audio.playTrade();
         this.applyPlayerCustomization();
         this.vfx.spawnSparkle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4);
-        this.vfx.spawnFloatingText(
-          GAME_WIDTH / 2,
-          GAME_HEIGHT * 0.45,
-          alreadyUnlocked ? 'SKIN EQUIPPED! 🎭' : 'SKIN UNLOCKED! 👑',
-          '#22c55e',
-        );
+        this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, 'SKIN UNLOCKED! 👑', '#22c55e');
         this.triggerHaptic(25);
       } else {
         this.audio.playError();
@@ -1820,7 +2089,60 @@ export class GameEngine {
     // Backgrounds (20)
     if (action.startsWith('bg_')) {
       const bgId = action.replace('bg_', '');
+      const bg = BACKGROUNDS.find(b => b.id === bgId);
       const alreadyUnlocked = this.shop.unlockedBackgrounds.includes(bgId);
+
+      if (alreadyUnlocked) {
+        this.shop.selectBackground(bgId);
+        this.audio.playTrade();
+        this.applyBackgroundCustomization();
+        this.vfx.spawnSparkle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4);
+        this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, 'SKY ACTIVE! 🌄', '#22c55e');
+        this.triggerHaptic(25);
+        return;
+      }
+
+      // If background requires shards
+      if (bg && bg.requiredShards) {
+        const curShards = this.shop.getBgShards(bgId);
+        if (curShards >= bg.requiredShards) {
+          this.shop.unlockBgByShards(bgId);
+          this.audio.playVictory();
+          this.applyBackgroundCustomization();
+          this.vfx.spawnSparkle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4);
+          this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, '🌅 NEW SKY UNLOCKED! 🎉', '#ec4899');
+          this.triggerHaptic([30, 40, 60]);
+          return;
+        }
+
+        // Exchange diamonds for shards
+        const diamondCost = bg.diamondExchangeCost || 50;
+        const shardsPerExchange = bg.shardsPerExchange || 1;
+        if (this.persistentDiamonds >= diamondCost) {
+          this.persistentDiamonds -= diamondCost;
+          this.savePersistentDiamonds();
+          const { total, unlocked } = this.shop.addBgShards(bgId, shardsPerExchange);
+          this.audio.playTrade();
+          this.vfx.spawnSparkle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4);
+          if (unlocked) {
+            this.shop.selectBackground(bgId);
+            this.applyBackgroundCustomization();
+            this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, `🎉 ${bg.name} UNLOCKED! 🌅`, '#ec4899');
+            this.triggerHaptic([30, 50, 70]);
+          } else {
+            this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, `+${shardsPerExchange} 🧩 SHARD OBTAINED! (${total}/${bg.requiredShards})`, '#ec4899');
+            this.triggerHaptic(30);
+          }
+          return;
+        } else {
+          this.audio.playError();
+          this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, `Need: ${diamondCost} 💎 (You have: ${this.persistentDiamonds} 💎)`, '#ef4444');
+          this.triggerHaptic(40);
+          return;
+        }
+      }
+
+      // Standard coins purchase
       const res = this.shop.buyOrSelectBackground(bgId, this.persistentCoins);
       if (res.success) {
         this.persistentCoins = res.newCoins;
@@ -1828,12 +2150,7 @@ export class GameEngine {
         this.audio.playTrade();
         this.applyBackgroundCustomization();
         this.vfx.spawnSparkle(GAME_WIDTH / 2, GAME_HEIGHT * 0.4);
-        this.vfx.spawnFloatingText(
-          GAME_WIDTH / 2,
-          GAME_HEIGHT * 0.45,
-          alreadyUnlocked ? 'SKY ACTIVE! 🌄' : 'SKY UNLOCKED! 🌅',
-          '#22c55e',
-        );
+        this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.45, 'SKY UNLOCKED! 🌅', '#22c55e');
         this.triggerHaptic(25);
       } else {
         this.audio.playError();
@@ -1863,6 +2180,7 @@ export class GameEngine {
           this.sessionSavedRelics += 1;
           recovered = 1;
         }
+        this.addDiamonds(recovered);
         this.sessionRecoveredRelics = recovered;
         this.audio.playTrade();
         this.camera.shake(6, 0.25);
@@ -1890,6 +2208,8 @@ export class GameEngine {
       'revive',
       () => {
         this.hasRevivedInRun = true;
+        this.hearts = this.maxHearts;
+        this.player.makeInvulnerable(2.5);
         this.input.reset();
         this.lastTime = performance.now();
 

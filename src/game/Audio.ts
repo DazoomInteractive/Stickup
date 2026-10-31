@@ -140,6 +140,17 @@ export class AudioManager {
     this.tone(200, 0.12, 'square', 0.22, 400);
   }
 
+  /** Impactful thud / grunt tone when player loses 1 heart. */
+  playHurt(): void {
+    this.tone(280, 0.14, 'sawtooth', 0.24, 90);
+  }
+
+  /** Sweet harmonic double chime when collecting a heart pickup (+1 Health). */
+  playHeartCollect(): void {
+    this.tone(523.25, 0.09, 'sine', 0.18, 783.99); // C5 -> G5
+    window.setTimeout(() => this.tone(783.99, 0.16, 'triangle', 0.2, 1046.5), 70); // G5 -> C6
+  }
+
   /** Low buzz tone when player cannot afford an item or action is invalid. */
   playError(): void {
     this.tone(180, 0.15, 'sawtooth', 0.18, 120);

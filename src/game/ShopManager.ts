@@ -37,6 +37,9 @@ export interface SkinItem {
   accent: string;
   glow: string;
   hasHat?: 'crown' | 'ninja_bandana' | 'visor' | 'viking_horns' | 'diver_goggles' | 'astronaut_dome' | 'pharaoh_nemes' | 'dragon_horns' | 'knight_helmet' | 'vampire_cape' | 'halo';
+  requiredShards?: number;
+  diamondExchangeCost?: number;
+  shardsPerExchange?: number;
 }
 
 export interface BackgroundItem {
@@ -50,6 +53,9 @@ export interface BackgroundItem {
   botColor: string;
   cloudColor: string;
   ambientGlow?: string;
+  requiredShards?: number;
+  diamondExchangeCost?: number;
+  shardsPerExchange?: number;
 }
 
 export const TRAILS: TrailItem[] = [
@@ -84,20 +90,20 @@ export const SKINS: SkinItem[] = [
   { id: 'ninja', name: 'Shadow Ninja', icon: '🥷', desc: 'Stealth suit with flying headband', cost: 220, color: '#1e1b4b', accent: '#ef4444', glow: 'rgba(239, 68, 68, 0.35)', hasHat: 'ninja_bandana' },
   { id: 'desert_nomad', name: 'Desert Nomad', icon: '🏜️', desc: 'Sandy traveler of the dunes', cost: 300, color: '#78350f', accent: '#fde047', glow: 'rgba(245, 158, 11, 0.3)' },
   { id: 'viking', name: 'Viking Warrior', icon: '🪓', desc: 'Nordic hero with horned helmet', cost: 400, color: '#334155', accent: '#e2e8f0', glow: 'rgba(148, 163, 184, 0.3)', hasHat: 'viking_horns' },
-  { id: 'cyber_neon', name: 'Cyber Neon', icon: '🤖', desc: 'Futuristic runner with glowing visor', cost: 550, color: '#06b6d4', accent: '#f43f5e', glow: 'rgba(6, 182, 212, 0.5)', hasHat: 'visor' },
+  { id: 'cyber_neon', name: 'Cyber Neon', icon: '🤖', desc: 'Futuristic runner with glowing visor', cost: 550, color: '#06b6d4', accent: '#f43f5e', glow: 'rgba(6, 182, 212, 0.5)', hasHat: 'visor', requiredShards: 50, diamondExchangeCost: 50, shardsPerExchange: 2 },
   { id: 'retro_arcade', name: 'Retro Arcade', icon: '🕹️', desc: '80s synthwave magenta hero', cost: 700, color: '#86198f', accent: '#22d3ee', glow: 'rgba(217, 70, 239, 0.45)' },
   { id: 'toxic_bio', name: 'Toxic Mutant', icon: '☣️', desc: 'Glowing radioactive biosuit', cost: 850, color: '#3f6212', accent: '#a3e635', glow: 'rgba(163, 230, 53, 0.5)' },
-  { id: 'royal_knight', name: 'Royal Knight', icon: '🛡️', desc: 'Silver plate-armored champion', cost: 1050, color: '#475569', accent: '#38bdf8', glow: 'rgba(56, 189, 248, 0.4)', hasHat: 'knight_helmet' },
+  { id: 'royal_knight', name: 'Royal Knight', icon: '🛡️', desc: 'Silver plate-armored champion', cost: 1050, color: '#475569', accent: '#38bdf8', glow: 'rgba(56, 189, 248, 0.4)', hasHat: 'knight_helmet', requiredShards: 100, diamondExchangeCost: 60, shardsPerExchange: 2 },
   { id: 'deep_diver', name: 'Ocean Diver', icon: '🤿', desc: 'Aquamarine deep sea diver', cost: 1300, color: '#0e7490', accent: '#67e8f9', glow: 'rgba(103, 232, 249, 0.45)', hasHat: 'diver_goggles' },
-  { id: 'astronaut', name: 'Galactic Astronaut', icon: '🧑‍🚀', desc: 'Spacewalker with white dome visor', cost: 1600, color: '#f8fafc', accent: '#38bdf8', glow: 'rgba(255, 255, 255, 0.6)', hasHat: 'astronaut_dome' },
+  { id: 'astronaut', name: 'Galactic Astronaut', icon: '🧑‍🚀', desc: 'Spacewalker with white dome visor', cost: 1600, color: '#f8fafc', accent: '#38bdf8', glow: 'rgba(255, 255, 255, 0.6)', hasHat: 'astronaut_dome', requiredShards: 200, diamondExchangeCost: 75, shardsPerExchange: 1 },
   { id: 'pharaoh', name: 'Sun Pharaoh', icon: '🏺', desc: 'Ancient monarch with golden nemes', cost: 1950, color: '#854d0e', accent: '#facc15', glow: 'rgba(250, 204, 21, 0.55)', hasHat: 'pharaoh_nemes' },
   { id: 'magma_golem', name: 'Magma Golem', icon: '🌋', desc: 'Molten rock volcanic elemental', cost: 2400, color: '#7f1d1d', accent: '#fb923c', glow: 'rgba(251, 146, 60, 0.6)' },
   { id: 'cyber_samurai', name: 'Cyber Samurai', icon: '⚔️', desc: 'Hi-tech ronin with neon blade aura', cost: 2900, color: '#0f172a', accent: '#a855f7', glow: 'rgba(168, 85, 247, 0.6)' },
   { id: 'vampire_lord', name: 'Vampire Lord', icon: '🧛', desc: 'Midnight noble with crimson cape', cost: 3500, color: '#18181b', accent: '#dc2626', glow: 'rgba(220, 38, 38, 0.55)', hasHat: 'vampire_cape' },
-  { id: 'dragon_king', name: 'Dragon King', icon: '🐉', desc: 'Mythic overlord with dragon horns', cost: 4200, color: '#581c87', accent: '#f59e0b', glow: 'rgba(245, 158, 11, 0.6)', hasHat: 'dragon_horns' },
+  { id: 'dragon_king', name: 'Dragon King', icon: '🐉', desc: 'Mythic overlord with dragon horns', cost: 4200, color: '#581c87', accent: '#f59e0b', glow: 'rgba(245, 158, 11, 0.6)', hasHat: 'dragon_horns', requiredShards: 350, diamondExchangeCost: 90, shardsPerExchange: 1 },
   { id: 'diamond_hero', name: 'Pure Diamond', icon: '💎', desc: 'Crystallized prismatic champion', cost: 5500, color: '#bae6fd', accent: '#ffffff', glow: 'rgba(56, 189, 248, 0.75)' },
   { id: 'gold_king', name: 'Gold King', icon: '👑', desc: 'Pure golden aura & royal crown', cost: 7000, color: '#f59e0b', accent: '#fef08a', glow: 'rgba(245, 158, 11, 0.8)', hasHat: 'crown' },
-  { id: 'cosmic_god', name: 'Cosmic Entity', icon: '🌌', desc: 'Infinite celestial being with holy halo', cost: 10000, color: '#312e81', accent: '#e0e7ff', glow: 'rgba(192, 132, 252, 0.9)', hasHat: 'halo' },
+  { id: 'cosmic_god', name: 'Cosmic Entity', icon: '🌌', desc: 'Infinite celestial being with holy halo', cost: 10000, color: '#312e81', accent: '#e0e7ff', glow: 'rgba(192, 132, 252, 0.9)', hasHat: 'halo', requiredShards: 500, diamondExchangeCost: 100, shardsPerExchange: 1 },
 ];
 
 export const BACKGROUNDS: BackgroundItem[] = [
@@ -113,14 +119,14 @@ export const BACKGROUNDS: BackgroundItem[] = [
   { id: 'deep_ocean', name: 'Deep Ocean', icon: '🌊', desc: 'Abyssal turquoise & deep currents', cost: 1200, topColor: '#082f49', midColor: '#0c4a6e', botColor: '#06b6d4', cloudColor: 'rgba(165, 243, 252, 0.7)' },
   { id: 'volcanic_sky', name: 'Volcanic Ash', icon: '🌋', desc: 'Smoldering crimson & magma haze', cost: 1500, topColor: '#450a0a', midColor: '#7f1d1d', botColor: '#ea580c', cloudColor: 'rgba(254, 215, 170, 0.65)', ambientGlow: 'rgba(234, 88, 12, 0.25)' },
   { id: 'toxic_wasteland', name: 'Toxic Wasteland', icon: '🧪', desc: 'Radioactive green mist & dark skies', cost: 1850, topColor: '#142900', midColor: '#365314', botColor: '#84cc16', cloudColor: 'rgba(217, 249, 157, 0.75)' },
-  { id: 'cyberpunk_city', name: 'Cyberpunk Megacity', icon: '🏙️', desc: 'Electric cyan & neon purple metropolis', cost: 2300, topColor: '#090014', midColor: '#2b0938', botColor: '#00f0ff', cloudColor: 'rgba(103, 232, 249, 0.65)', ambientGlow: 'rgba(0, 240, 255, 0.2)' },
+  { id: 'cyberpunk_city', name: 'Cyberpunk Megacity', icon: '🏙️', desc: 'Electric cyan & neon purple metropolis', cost: 2300, topColor: '#090014', midColor: '#2b0938', botColor: '#00f0ff', cloudColor: 'rgba(103, 232, 249, 0.65)', ambientGlow: 'rgba(0, 240, 255, 0.2)', requiredShards: 50, diamondExchangeCost: 50, shardsPerExchange: 2 },
   { id: 'ancient_egypt', name: 'Ancient Egypt', icon: '🏺', desc: 'Mystical golden pyramid horizon', cost: 2800, topColor: '#713f12', midColor: '#b45309', botColor: '#fde047', cloudColor: 'rgba(254, 240, 138, 0.8)' },
   { id: 'enchanted_realm', name: 'Enchanted Realm', icon: '✨', desc: 'Fairy purple dusk with mystical stars', cost: 3400, topColor: '#3b0764', midColor: '#6b21a8', botColor: '#c084fc', cloudColor: 'rgba(233, 213, 255, 0.85)' },
-  { id: 'arctic_aurora', name: 'Arctic Aurora', icon: '🌌', desc: 'Northern lights green & violet aurora', cost: 4100, topColor: '#022c22', midColor: '#065f46', botColor: '#2dd4bf', cloudColor: 'rgba(153, 246, 228, 0.8)', ambientGlow: 'rgba(45, 212, 191, 0.25)' },
-  { id: 'blood_moon', name: 'Blood Moon', icon: '🌕', desc: 'Eerie obsidian dark sky & red eclipse', cost: 5000, topColor: '#180000', midColor: '#450a0a', botColor: '#dc2626', cloudColor: 'rgba(254, 202, 202, 0.65)', ambientGlow: 'rgba(220, 38, 38, 0.3)' },
+  { id: 'arctic_aurora', name: 'Arctic Aurora', icon: '🌌', desc: 'Northern lights green & violet aurora', cost: 4100, topColor: '#022c22', midColor: '#065f46', botColor: '#2dd4bf', cloudColor: 'rgba(153, 246, 228, 0.8)', ambientGlow: 'rgba(45, 212, 191, 0.25)', requiredShards: 100, diamondExchangeCost: 60, shardsPerExchange: 2 },
+  { id: 'blood_moon', name: 'Blood Moon', icon: '🌕', desc: 'Eerie obsidian dark sky & red eclipse', cost: 5000, topColor: '#180000', midColor: '#450a0a', botColor: '#dc2626', cloudColor: 'rgba(254, 202, 202, 0.65)', ambientGlow: 'rgba(220, 38, 38, 0.3)', requiredShards: 200, diamondExchangeCost: 75, shardsPerExchange: 1 },
   { id: 'golden_palace', name: 'Golden Palace', icon: '👑', desc: 'Royal opulent gold radiance', cost: 6200, topColor: '#78350f', midColor: '#d97706', botColor: '#fef08a', cloudColor: 'rgba(255, 255, 255, 0.9)', ambientGlow: 'rgba(245, 158, 11, 0.3)' },
-  { id: 'mars_planet', name: 'Mars Surface', icon: '🪐', desc: 'Rusty crimson Martian red planet atmosphere', cost: 7800, topColor: '#360909', midColor: '#7c2d12', botColor: '#f97316', cloudColor: 'rgba(255, 237, 213, 0.7)' },
-  { id: 'cosmic_space', name: 'Cosmic Deep Space', icon: '🚀', desc: 'Infinite black cosmos & purple nebulae', cost: 10000, topColor: '#000000', midColor: '#0f051d', botColor: '#4c1d95', cloudColor: 'rgba(192, 132, 252, 0.55)', ambientGlow: 'rgba(147, 51, 234, 0.35)' },
+  { id: 'mars_planet', name: 'Mars Surface', icon: '🪐', desc: 'Rusty crimson Martian red planet atmosphere', cost: 7800, topColor: '#360909', midColor: '#7c2d12', botColor: '#f97316', cloudColor: 'rgba(255, 237, 213, 0.7)', requiredShards: 350, diamondExchangeCost: 90, shardsPerExchange: 1 },
+  { id: 'cosmic_space', name: 'Cosmic Deep Space', icon: '🚀', desc: 'Infinite black cosmos & purple nebulae', cost: 10000, topColor: '#000000', midColor: '#0f051d', botColor: '#4c1d95', cloudColor: 'rgba(192, 132, 252, 0.55)', ambientGlow: 'rgba(147, 51, 234, 0.35)', requiredShards: 500, diamondExchangeCost: 100, shardsPerExchange: 1 },
 ];
 
 export class ShopManager {
@@ -143,6 +149,10 @@ export class ShopManager {
   // Selected & unlocked backgrounds
   unlockedBackgrounds: string[] = ['classic_sky'];
   selectedBackground = 'classic_sky';
+
+  // Shards (Bo'laklar) for Special Skins & Backgrounds
+  skinShards: Record<string, number> = {};
+  bgShards: Record<string, number> = {};
 
   // 10-Level Strict 2X Upgrade Costs (25, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800)
   readonly upgradeCosts = [25, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800] as const;
@@ -167,6 +177,8 @@ export class ShopManager {
         if (typeof data.selectedSkin === 'string') this.selectedSkin = data.selectedSkin;
         if (Array.isArray(data.unlockedBackgrounds)) this.unlockedBackgrounds = data.unlockedBackgrounds;
         if (typeof data.selectedBackground === 'string') this.selectedBackground = data.selectedBackground;
+        if (data.skinShards && typeof data.skinShards === 'object') this.skinShards = data.skinShards;
+        if (data.bgShards && typeof data.bgShards === 'object') this.bgShards = data.bgShards;
       }
     } catch {
       // Ignore storage errors in sandboxed environments
@@ -186,6 +198,8 @@ export class ShopManager {
         selectedSkin: this.selectedSkin,
         unlockedBackgrounds: this.unlockedBackgrounds,
         selectedBackground: this.selectedBackground,
+        skinShards: this.skinShards,
+        bgShards: this.bgShards,
       };
       localStorage.setItem(ShopManager.STORAGE_KEY, JSON.stringify(data));
     } catch {
@@ -364,6 +378,70 @@ export class ShopManager {
 
   selectBackground(bgId: string): boolean {
     if (this.unlockedBackgrounds.includes(bgId)) {
+      this.selectedBackground = bgId;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  // --- Shard Helpers ---
+
+  getSkinShards(skinId: string): number {
+    return this.skinShards[skinId] || 0;
+  }
+
+  getBgShards(bgId: string): number {
+    return this.bgShards[bgId] || 0;
+  }
+
+  addSkinShards(skinId: string, amount: number): { total: number; unlocked: boolean } {
+    const cur = this.getSkinShards(skinId) + amount;
+    this.skinShards[skinId] = cur;
+    const skin = SKINS.find(s => s.id === skinId);
+    let unlocked = false;
+    if (skin && skin.requiredShards && cur >= skin.requiredShards && !this.unlockedSkins.includes(skinId)) {
+      this.unlockedSkins.push(skinId);
+      unlocked = true;
+    }
+    this.save();
+    return { total: cur, unlocked };
+  }
+
+  addBgShards(bgId: string, amount: number): { total: number; unlocked: boolean } {
+    const cur = this.getBgShards(bgId) + amount;
+    this.bgShards[bgId] = cur;
+    const bg = BACKGROUNDS.find(b => b.id === bgId);
+    let unlocked = false;
+    if (bg && bg.requiredShards && cur >= bg.requiredShards && !this.unlockedBackgrounds.includes(bgId)) {
+      this.unlockedBackgrounds.push(bgId);
+      unlocked = true;
+    }
+    this.save();
+    return { total: cur, unlocked };
+  }
+
+  unlockSkinByShards(skinId: string): boolean {
+    const skin = SKINS.find(s => s.id === skinId);
+    if (!skin || !skin.requiredShards) return false;
+    if (this.getSkinShards(skinId) >= skin.requiredShards) {
+      if (!this.unlockedSkins.includes(skinId)) {
+        this.unlockedSkins.push(skinId);
+      }
+      this.selectedSkin = skinId;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  unlockBgByShards(bgId: string): boolean {
+    const bg = BACKGROUNDS.find(b => b.id === bgId);
+    if (!bg || !bg.requiredShards) return false;
+    if (this.getBgShards(bgId) >= bg.requiredShards) {
+      if (!this.unlockedBackgrounds.includes(bgId)) {
+        this.unlockedBackgrounds.push(bgId);
+      }
       this.selectedBackground = bgId;
       this.save();
       return true;

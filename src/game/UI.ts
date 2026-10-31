@@ -798,6 +798,8 @@ export class UI {
     magnetTimer = 0,
     hasMultiplier = false,
     multiplierTimer = 0,
+    hearts = 3,
+    maxHearts = 3,
   ): void {
     ctx.save();
 
@@ -838,8 +840,58 @@ export class UI {
       ctx.fillText(`(BEST: ${bestScore}m)`, 26 + scoreWidth, 26);
     }
 
-    // 3. Power-Up indicators stacked cleanly on top-left
-    let powerupY = 50;
+    // 2. HEARTS (❤️❤️❤️ Jonlar) Pill under the Score
+    const heartsPillW = 110;
+    const heartsPillH = 30;
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(10, 48, heartsPillW, heartsPillH, 15);
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw 3 glowing hearts
+    for (let i = 0; i < maxHearts; i++) {
+      const hx = 28 + i * 32;
+      const hy = 63;
+      const isAlive = i < hearts;
+
+      ctx.save();
+      ctx.translate(hx, hy);
+      if (isAlive) {
+        ctx.shadowColor = 'rgba(239, 68, 68, 0.9)';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = '#ef4444';
+      } else {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(100, 116, 139, 0.5)';
+      }
+
+      // Heart polygon
+      const d = 7.5;
+      ctx.beginPath();
+      ctx.moveTo(0, d * 0.45);
+      ctx.bezierCurveTo(-d * 0.8, -d * 0.5, -d * 1.5, d * 0.35, 0, d * 1.4);
+      ctx.bezierCurveTo(d * 1.5, d * 0.35, d * 0.8, -d * 0.5, 0, d * 0.45);
+      ctx.closePath();
+      ctx.fill();
+
+      if (isAlive) {
+        // Specular highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.beginPath();
+        ctx.ellipse(-d * 0.4, -0.5, d * 0.3, d * 0.18, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // 3. Power-Up indicators stacked cleanly on top-left (below hearts)
+    let powerupY = 88;
 
     if (hasShield) {
       ctx.fillStyle = '#38bdf8';
@@ -1159,15 +1211,15 @@ export class UI {
     ctx.font = 'bold 17px Roboto, sans-serif';
     ctx.fillText(`🪙 TOTAL COINS: ${coins}`, GAME_WIDTH / 2, cardY + 60);
 
-    // Saved Diamonds
+    // Saved Diamonds (25% base kept)
     ctx.fillStyle = '#0284c7';
     ctx.font = 'bold 15px Roboto, sans-serif';
-    ctx.fillText(`💎 SAVED DIAMONDS: +${relics}`, GAME_WIDTH / 2, cardY + 88);
+    ctx.fillText(`💎 SAQLANDI: +${relics} (25%)`, GAME_WIDTH / 2, cardY + 88);
 
     if (lostRelics > 0) {
       ctx.fillStyle = '#ef4444';
       ctx.font = '600 12px Roboto, sans-serif';
-      ctx.fillText(`⚠️ Lost ${lostRelics} unsold diamonds on fall!`, GAME_WIDTH / 2, cardY + 112);
+      ctx.fillText(`⚠️ Yo'qotildi: -${lostRelics} (75% tubsizlikda)`, GAME_WIDTH / 2, cardY + 112);
     }
 
     // Best score line with highlight
@@ -1175,64 +1227,40 @@ export class UI {
     if (isNewBest) {
       ctx.fillStyle = '#d97706';
       ctx.font = '900 14px Roboto, sans-serif';
-      ctx.fillText(`★ NEW RECORD: ${bestScore}m! ★`, GAME_WIDTH / 2, bestY);
+      ctx.fillText(`★ YANGI REKORD: ${bestScore}m! ★`, GAME_WIDTH / 2, bestY);
     } else {
       ctx.fillStyle = '#64748b';
       ctx.font = '600 13px Roboto, sans-serif';
-      ctx.fillText(`Best Record: ${bestScore}m`, GAME_WIDTH / 2, bestY);
+      ctx.fillText(`Eng yaxshi rekord: ${bestScore}m`, GAME_WIDTH / 2, bestY);
     }
     ctx.restore();
 
     // Dynamically position action and rewarded ad buttons
     let curY = cardY + cardH + 12;
-    const btnW = 260;
+    const btnW = 270;
     const btnH = 44;
     const gap = 8;
 
-    // 1. Revive & Rescue Ad Button (1x per run)
-    if (adsAvailable) {
-      this.buttons.revive.x = (GAME_WIDTH - btnW) / 2;
-      this.buttons.revive.y = curY;
-      this.buttons.revive.width = btnW;
-      this.buttons.revive.height = btnH;
-      if (canRevive) {
-        this.buttons.revive.label = '📺 RESCUE 🚀 (AD)';
-        this.buttons.revive.color = '#ea580c';
-        this.buttons.revive.hoverColor = '#f97316';
-        this.drawButton(ctx, 'revive');
-      } else {
-        this.buttons.revive.label = '✓ ALREADY RESCUED';
-        this.buttons.revive.color = '#64748b';
-        this.buttons.revive.hoverColor = '#64748b';
-        this.drawButton(ctx, 'revive');
-      }
-      curY += btnH + gap;
-    } else {
-      this.buttons.revive.x = -9999;
-      this.buttons.revive.y = -9999;
-      this.buttons.revive.width = 0;
-      this.buttons.revive.height = 0;
-    }
-
-    // 2. Recover Diamonds Ad Button
+    // 1. Recover Diamonds Ad Button (+25% back -> total 50%)
     if (adsAvailable) {
       this.buttons.recoverDiamonds.x = (GAME_WIDTH - btnW) / 2;
       this.buttons.recoverDiamonds.y = curY;
       this.buttons.recoverDiamonds.width = btnW;
       this.buttons.recoverDiamonds.height = btnH;
+
       if (canRecover) {
         const totalRelics = relics + lostRelics;
         const targetTotal = Math.ceil(totalRelics * 0.5);
         const recoverable = lostRelics > 0 ? Math.max(1, targetTotal - relics) : 1;
         this.buttons.recoverDiamonds.label = lostRelics > 0
-          ? `📺 RECOVER +${recoverable} 💎 (AD)`
-          : '📺 BONUS +1 💎 (AD)';
+          ? `📺 QUTQARISH +${recoverable} 💎 (+25%)`
+          : '📺 BONUS +1 💎 (REKLAMA)';
         this.buttons.recoverDiamonds.color = '#059669';
         this.buttons.recoverDiamonds.hoverColor = '#10b981';
         this.drawButton(ctx, 'recoverDiamonds');
       } else {
         const shownRecovered = recoveredAmount > 0 ? recoveredAmount : 1;
-        this.buttons.recoverDiamonds.label = `✓ +${shownRecovered} 💎 RECOVERED`;
+        this.buttons.recoverDiamonds.label = `✓ +${shownRecovered} 💎 QUTQARILDI (50%)`;
         this.buttons.recoverDiamonds.color = '#64748b';
         this.buttons.recoverDiamonds.hoverColor = '#64748b';
         this.drawButton(ctx, 'recoverDiamonds');
@@ -1243,6 +1271,32 @@ export class UI {
       this.buttons.recoverDiamonds.y = -9999;
       this.buttons.recoverDiamonds.width = 0;
       this.buttons.recoverDiamonds.height = 0;
+    }
+
+    // 2. Revive & Resume Ad Button (1x per run only)
+    if (adsAvailable) {
+      this.buttons.revive.x = (GAME_WIDTH - btnW) / 2;
+      this.buttons.revive.y = curY;
+      this.buttons.revive.width = btnW;
+      this.buttons.revive.height = btnH;
+
+      if (canRevive) {
+        this.buttons.revive.label = '❤️ TIRILISH 🚀 (1x REKLAMA)';
+        this.buttons.revive.color = '#ea580c';
+        this.buttons.revive.hoverColor = '#f97316';
+        this.drawButton(ctx, 'revive');
+      } else {
+        this.buttons.revive.label = '✓ TIRILISH ISHLATILDI';
+        this.buttons.revive.color = '#64748b';
+        this.buttons.revive.hoverColor = '#64748b';
+        this.drawButton(ctx, 'revive');
+      }
+      curY += btnH + gap;
+    } else {
+      this.buttons.revive.x = -9999;
+      this.buttons.revive.y = -9999;
+      this.buttons.revive.width = 0;
+      this.buttons.revive.height = 0;
     }
 
     // 3. Restart button
@@ -1545,6 +1599,7 @@ export class UI {
   drawShopMenu(
     ctx: CanvasRenderingContext2D,
     coins: number,
+    diamonds: number = 0,
     shop: ShopManager,
     activeTab: 'upgrades' | 'skins' | 'trails' | 'backgrounds' = 'upgrades',
     page: number = 0,
@@ -1582,23 +1637,34 @@ export class UI {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 16px Roboto, sans-serif';
-    ctx.fillText('🛒 SKY SHOP & VAULT', cardX + 16, cardY + headH / 2);
+    ctx.font = '900 15px Roboto, sans-serif';
+    ctx.fillText('🛒 SKY SHOP', cardX + 14, cardY + headH / 2);
 
-    // Coins Balance Badge
-    const coinBadgeW = 100;
-    const coinBadgeH = 28;
-    const coinBadgeX = cardX + cardW - coinBadgeW - 14;
-    const coinBadgeY = cardY + (headH - coinBadgeH) / 2;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+    // Coins & Diamonds Balance Badges
+    const badgeH = 28;
+    const coinBadgeW = 84;
+    const diamBadgeW = 84;
+    const diamBadgeX = cardX + cardW - diamBadgeW - 12;
+    const coinBadgeX = diamBadgeX - coinBadgeW - 6;
+    const badgeY = cardY + (headH - badgeH) / 2;
+
+    // Coins badge
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.beginPath();
-    ctx.roundRect(coinBadgeX, coinBadgeY, coinBadgeW, coinBadgeH, 14);
+    ctx.roundRect(coinBadgeX, badgeY, coinBadgeW, badgeH, 14);
     ctx.fill();
-
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 13px Roboto, sans-serif';
-    ctx.fillText(`🪙 ${coins}`, coinBadgeX + coinBadgeW / 2, coinBadgeY + coinBadgeH / 2);
+    ctx.font = 'bold 12px Roboto, sans-serif';
+    ctx.fillText(`🪙 ${coins}`, coinBadgeX + coinBadgeW / 2, badgeY + badgeH / 2);
+
+    // Diamonds badge
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.beginPath();
+    ctx.roundRect(diamBadgeX, badgeY, diamBadgeW, badgeH, 14);
+    ctx.fill();
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(`💎 ${diamonds}`, diamBadgeX + diamBadgeW / 2, badgeY + badgeH / 2);
 
     // 4 Tab Navigation Bar
     const tabY = cardY + headH + 8;
@@ -1768,11 +1834,33 @@ export class UI {
         ctx.font = '500 11px Roboto, sans-serif';
         ctx.fillText(s.desc, cardX + 64, rowY + 44);
 
-        // Price badge if locked
+        // Price / Shard badge if locked
         if (!isUnlocked) {
-          ctx.fillStyle = '#d97706';
-          ctx.font = 'bold 10.5px Roboto, sans-serif';
-          ctx.fillText(`Cost: ${s.cost} 🪙`, cardX + 64, rowY + 63);
+          if (s.requiredShards) {
+            const shards = shop.getSkinShards(s.id);
+            const req = s.requiredShards;
+            ctx.fillStyle = '#ec4899';
+            ctx.font = 'bold 10px Roboto, sans-serif';
+            ctx.fillText(`🧩 ${shards}/${req} Shards | 💎 ${s.diamondExchangeCost}=+${s.shardsPerExchange}🧩`, cardX + 64, rowY + 62);
+
+            const barW = 100;
+            const barH = 3.5;
+            const barX = cardX + 64;
+            const barY = rowY + 67;
+            ctx.fillStyle = '#e2e8f0';
+            this.roundRectPath(ctx, barX, barY, barW, barH, 2);
+            ctx.fill();
+            const pct = Math.min(1, shards / req);
+            if (pct > 0) {
+              ctx.fillStyle = pct >= 1 ? '#10b981' : '#ec4899';
+              this.roundRectPath(ctx, barX, barY, barW * pct, barH, 2);
+              ctx.fill();
+            }
+          } else {
+            ctx.fillStyle = '#d97706';
+            ctx.font = 'bold 10.5px Roboto, sans-serif';
+            ctx.fillText(`Cost: ${s.cost} 🪙`, cardX + 64, rowY + 63);
+          }
         }
 
         // Action button
@@ -1781,14 +1869,24 @@ export class UI {
         const btnX = cardX + cardW - 12 - btnW - 10;
         const btnY = rowY + (rowH - btnH) / 2;
 
-        ctx.fillStyle = isSelected ? '#15803d' : isUnlocked ? '#2563eb' : canAfford ? '#d97706' : '#cbd5e1';
+        const hasShardsToUnlock = s.requiredShards && shop.getSkinShards(s.id) >= s.requiredShards;
+        const canAffordDiamonds = s.diamondExchangeCost && diamonds >= s.diamondExchangeCost;
+        ctx.fillStyle = isSelected ? '#15803d'
+          : isUnlocked ? '#2563eb'
+          : hasShardsToUnlock ? '#16a34a'
+          : canAffordDiamonds ? '#be185d'
+          : canAfford ? '#d97706' : '#cbd5e1';
         this.roundRectPath(ctx, btnX, btnY, btnW, btnH, 8);
         ctx.fill();
 
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px Roboto, sans-serif';
-        const label = isSelected ? 'EQUIPPED' : isUnlocked ? 'EQUIP' : `${s.cost} 🪙`;
+        ctx.font = 'bold 10.5px Roboto, sans-serif';
+        const label = isSelected ? 'EQUIPPED'
+          : isUnlocked ? 'EQUIP'
+          : hasShardsToUnlock ? '🧩 UNLOCK'
+          : s.diamondExchangeCost ? `💎 ${s.diamondExchangeCost}`
+          : `${s.cost} 🪙`;
         ctx.fillText(label, btnX + btnW / 2, btnY + btnH / 2);
       }
 
@@ -1910,10 +2008,33 @@ export class UI {
         ctx.font = '500 11px Roboto, sans-serif';
         ctx.fillText(bg.desc, cardX + 68, rowY + 44);
 
+        // Price / Shard badge if locked
         if (!isUnlocked) {
-          ctx.fillStyle = '#d97706';
-          ctx.font = 'bold 10.5px Roboto, sans-serif';
-          ctx.fillText(`Cost: ${bg.cost} 🪙`, cardX + 68, rowY + 63);
+          if (bg.requiredShards) {
+            const shards = shop.getBgShards(bg.id);
+            const req = bg.requiredShards;
+            ctx.fillStyle = '#ec4899';
+            ctx.font = 'bold 10px Roboto, sans-serif';
+            ctx.fillText(`🧩 ${shards}/${req} Shards | 💎 ${bg.diamondExchangeCost}=+${bg.shardsPerExchange}🧩`, cardX + 68, rowY + 62);
+
+            const barW = 100;
+            const barH = 3.5;
+            const barX = cardX + 68;
+            const barY = rowY + 67;
+            ctx.fillStyle = '#e2e8f0';
+            this.roundRectPath(ctx, barX, barY, barW, barH, 2);
+            ctx.fill();
+            const pct = Math.min(1, shards / req);
+            if (pct > 0) {
+              ctx.fillStyle = pct >= 1 ? '#10b981' : '#ec4899';
+              this.roundRectPath(ctx, barX, barY, barW * pct, barH, 2);
+              ctx.fill();
+            }
+          } else {
+            ctx.fillStyle = '#d97706';
+            ctx.font = 'bold 10.5px Roboto, sans-serif';
+            ctx.fillText(`Cost: ${bg.cost} 🪙`, cardX + 68, rowY + 63);
+          }
         }
 
         // Action button
@@ -1922,14 +2043,24 @@ export class UI {
         const btnX = cardX + cardW - 12 - btnW - 10;
         const btnY = rowY + (rowH - btnH) / 2;
 
-        ctx.fillStyle = isSelected ? '#15803d' : isUnlocked ? '#2563eb' : canAfford ? '#d97706' : '#cbd5e1';
+        const hasBgShardsToUnlock = bg.requiredShards && shop.getBgShards(bg.id) >= bg.requiredShards;
+        const canAffordBgDiamonds = bg.diamondExchangeCost && diamonds >= bg.diamondExchangeCost;
+        ctx.fillStyle = isSelected ? '#15803d'
+          : isUnlocked ? '#2563eb'
+          : hasBgShardsToUnlock ? '#16a34a'
+          : canAffordBgDiamonds ? '#be185d'
+          : canAfford ? '#d97706' : '#cbd5e1';
         this.roundRectPath(ctx, btnX, btnY, btnW, btnH, 8);
         ctx.fill();
 
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px Roboto, sans-serif';
-        const label = isSelected ? 'ACTIVE' : isUnlocked ? 'SELECT' : `${bg.cost} 🪙`;
+        ctx.font = 'bold 10.5px Roboto, sans-serif';
+        const label = isSelected ? 'ACTIVE'
+          : isUnlocked ? 'SELECT'
+          : hasBgShardsToUnlock ? '🧩 UNLOCK'
+          : bg.diamondExchangeCost ? `💎 ${bg.diamondExchangeCost}`
+          : `${bg.cost} 🪙`;
         ctx.fillText(label, btnX + btnW / 2, btnY + btnH / 2);
       }
 

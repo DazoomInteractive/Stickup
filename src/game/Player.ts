@@ -58,6 +58,9 @@ export class Player {
   multiplierTimer = 0;
   multiplierMax = 4.0;
 
+  // Invulnerability state (damage protection / blinking)
+  invulnerableTimer = 0;
+
   // Custom Skin, Hat & Upgrades
   skinColor = '#2b2b2b';
   skinAccent = '#4a90d9';
@@ -108,7 +111,19 @@ export class Player {
     this.multiplierMax = duration;
   }
 
+  makeInvulnerable(duration = 1.5): void {
+    this.invulnerableTimer = duration;
+  }
+
+  isInvulnerable(): boolean {
+    return this.invulnerableTimer > 0;
+  }
+
   update(dt: number, input: InputHandler): void {
+    if (this.invulnerableTimer > 0) {
+      this.invulnerableTimer = Math.max(0, this.invulnerableTimer - dt);
+    }
+
     // Horizontal movement (active in all modes including jetpack)
     let dir = 0;
     if (input.isLeft()) dir -= 1;
@@ -243,6 +258,11 @@ export class Player {
     ctx.translate(sx + this.width / 2, feetY - (this.height / 2) * this.scaleY);
     ctx.rotate(this.tilt);
     ctx.scale(this.scaleX, this.scaleY);
+
+    // Damage flash/blink while invulnerable
+    if (this.invulnerableTimer > 0 && Math.floor(this.invulnerableTimer * 16) % 2 === 0) {
+      ctx.globalAlpha = 0.35;
+    }
 
     if (this.hasJetpack) {
       this.drawJetpack(ctx);

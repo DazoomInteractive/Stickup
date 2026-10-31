@@ -44,10 +44,15 @@ export const MERCHANT_SPAWN_CHANCE = 0.08;  // 8% chance on solid platform after
 export const MERCHANT_MIN_METER = 30;       // First merchant appears after 30m
 export const ENEMY_MIN_METER = 80;          // Enemies start appearing after 80m
 export const ENEMY_SPAWN_CHANCE = 0.10;     // 10% chance
-export const HAZARD_MIN_METER = 999999;     // Disabled unfair hazards
-export const HAZARD_INTERVAL_MIN = 999;
-export const HAZARD_INTERVAL_MAX = 999;
-export const DEATH_RELIC_KEEP_RATE = 0.50;  // Keep 50% unsold diamonds on death (50% risk penalty)
+export const HAZARD_MIN_METER = 400;        // Falling rocks (⚠️) start after 400m
+export const HAZARD_INTERVAL_MIN = 10;      // Random 10 to 20s interval
+export const HAZARD_INTERVAL_MAX = 20;
+export const DEATH_RELIC_KEEP_RATE = 0.25;  // Keep 25% unsold diamonds on death (75% lost to the abyss!)
+
+// Health / Hearts system
+export const MAX_HEARTS = 3;                // Maximum player hearts
+export const HEART_SPAWN_START_METER = 150; // Starts appearing after 150m
+export const HEART_SPAWN_CHANCE = 0.08;     // 8% chance on platform (higher when wounded)
 
 // Power-up balance constants
 export const SHIELD_SPAWN_CHANCE = 0.055;  // 5.5% spawn rate for Shield
@@ -108,7 +113,7 @@ export const COLORS = {
 } as const;
 
 // Game metadata & Anti-Piracy Notice
-export const GAME_VERSION = 'v2.0.0';
+export const GAME_VERSION = 'v3.0.0';
 export const STUDIO_NAME = 'DazzomInteractive';
 export const COPYRIGHT_NOTICE = '© 2026 DazzomInteractive. All Rights Reserved.';
 
