@@ -21,6 +21,7 @@ class GameEngine(
     val merchants = mutableListOf<Merchant>()
     val enemies = mutableListOf<Enemy>()
     val arrows = mutableListOf<Arrow>()
+    val hazards = mutableListOf<FallingHazard>()
     val diamonds = mutableListOf<Diamond>()
     val coins = mutableListOf<Coin>()
     val powerUps = mutableListOf<PowerUp>()
@@ -40,6 +41,8 @@ class GameEngine(
     private var highestPlatformY = 0f
     var lavaY = GameConstants.GAME_HEIGHT + 350f
     var activeNearMerchant: Merchant? = null
+    var hyperSpeedAnnounced = false
+    var hazardTimer = 4.0f
 
     init {
         applyEquippedCustomization()
@@ -82,12 +85,14 @@ class GameEngine(
         merchants.clear()
         enemies.clear()
         arrows.clear()
+        hazards.clear()
         diamonds.clear()
         coins.clear()
         powerUps.clear()
         particles.clear()
         floatingTexts.clear()
 
+        hazardTimer = 4.0f
         cameraY = 0f
         heightMeters = 0
         diamondCount = 0
@@ -99,6 +104,7 @@ class GameEngine(
         highestY = player.y
         lavaY = GameConstants.GAME_HEIGHT + 350f
         activeNearMerchant = null
+        hyperSpeedAnnounced = false
 
         // Initial ground platform
         val startPlat = Platform(
@@ -146,9 +152,18 @@ class GameEngine(
             }
         }
 
+        // Dynamic Hyper Speed (+50% at 1000m+)
+        val speedMultiplier = if (heightMeters >= 1000) 1.5f else 1.0f
+        if (heightMeters >= 1000 && !hyperSpeedAnnounced) {
+            hyperSpeedAnnounced = true
+            spawnFloatingText(GameConstants.GAME_WIDTH / 2f, cameraY + 300f, "⚡ 1000m+ HYPER SPEED (+50%)! 🚀", Color(0xFFF59E0B))
+            sound.playPowerUp()
+        }
+        val simDt = dt * speedMultiplier
+
         // Update Platforms
         for (plat in platforms) {
-            plat.update(dt)
+            plat.update(simDt)
 
             // Platform collision (only when falling downwards)
             if (player.vy > 0f && !player.hasJetpack) {
@@ -203,22 +218,78 @@ class GameEngine(
 
         // Update Enemies
         for (enemy in enemies) {
-            enemy.update(dt)
+            enemy.update(simDt, player.centerX, player.centerY, platforms)
             if (!enemy.active) continue
 
             // Check stomp from above
             if (player.vy > 0f && player.feetY >= enemy.y - 10f && player.feetY <= enemy.y + 20f) {
                 if (abs(player.centerX - enemy.x) < (enemy.width / 2f + player.width / 2f)) {
-                    // Stomp success!
-                    enemy.active = false
-                    player.bounce(true)
-                    val stompCoins = if (player.hasMultiplier) 10 else 5
-                    coinCount += stompCoins
-                    sound.playStomp()
-                    spawnFloatingText(enemy.x, enemy.y, "+$stompCoins 🪙", Color(0xFFFFB703))
-                    spawnExplosionParticles(enemy.x, enemy.y, Color(0xFFA855F7))
-                    continue
+                    if (enemy.type == EnemyType.ZOMBIE) {
+                        // Zombie stomp: Do NOT kill, NO coins, Stun for 1.8s (dizzy 💫)!
+                        enemy.stunTimer = 1.8f
+                        enemy.dizzyAngle = 0f
+                        enemy.isJumping = false
+                        enemy.vy = 0f
+                        player.bounce(true)
+                        sound.playStomp()
+                        spawnFloatingText(enemy.x, enemy.y, "💫 STUNNED! (1.8s)", Color(0xFFFDE047))
+                        spawnDustParticles(enemy.x, enemy.y)
+                        continue
+                    } else if (enemy.type == EnemyType.ARCHER) {
+                        // Archer Elf stomp: NO coins, Stun 1.8s + 1 of 3 Random Outcomes!
+                        enemy.stunTimer = 1.8f
+                        enemy.dizzyAngle = 0f
+                        enemy.isJumping = false
+                        enemy.vy = 0f
+                        enemy.isAiming = false
+                        player.bounce(true)
+                        sound.playStomp()
+                        val roll = Math.random()
+                        if (roll < 0.33) {
+                            // Outcome 1: Disarm & Ammo Loot (+2 Arrows)
+                            player.arrowAmmo += 2
+                            spawnFloatingText(enemy.x, enemy.y, "🏹 +2 ARROWS LOOTED!", Color(0xFF38BDF8))
+                            spawnSparkleParticles(enemy.x, enemy.y, Color(0xFF38BDF8))
+                        } else if (roll < 0.67) {
+                            // Outcome 2: Broken Bow (permanently cannot shoot)
+                            enemy.bowBroken = true
+                            spawnFloatingText(enemy.x, enemy.y, "💥 BOW BROKEN!", Color(0xFFEF4444))
+                            spawnDustParticles(enemy.x, enemy.y)
+                        } else {
+                            // Outcome 3: Wild Dizzy Shot
+                            val wildAngle = (if (Math.random() > 0.5) 1f else -1f) * 0.7f - 1.57f
+                            val speed = 310f
+                            arrows.add(
+                                Arrow(
+                                    x = enemy.x,
+                                    y = enemy.y,
+                                    vx = kotlin.math.cos(wildAngle) * speed,
+                                    vy = kotlin.math.sin(wildAngle) * speed,
+                                    angle = wildAngle,
+                                    isPlayerArrow = false
+                                )
+                            )
+                            spawnFloatingText(enemy.x, enemy.y, "🌀 WILD SHOT!", Color(0xFFF59E0B))
+                            sound.playShoot()
+                        }
+                        continue
+                    } else {
+                        // Stomp success for other monsters!
+                        enemy.active = false
+                        player.bounce(true)
+                        val stompCoins = if (player.hasMultiplier) 10 else 5
+                        coinCount += stompCoins
+                        sound.playStomp()
+                        spawnFloatingText(enemy.x, enemy.y, "+$stompCoins 🪙", Color(0xFFFFB703))
+                        spawnExplosionParticles(enemy.x, enemy.y, Color(0xFFA855F7))
+                        continue
+                    }
                 }
+            }
+
+            // Stunned enemy cannot harm player
+            if (enemy.stunTimer > 0f) {
+                continue
             }
 
             // Touching enemy body
@@ -236,20 +307,48 @@ class GameEngine(
                 }
             }
 
-            // Archer enemy shoots arrows
-            if (enemy.type == EnemyType.ARCHER && enemy.shootCooldown <= 0f) {
-                enemy.shootCooldown = 3.5f
-                arrows.add(Arrow(enemy.x, enemy.y, enemy.facing * 280f))
+            // Archer enemy shoots 360-degree aimed arrows (except straight down)
+            if (enemy.type == EnemyType.ARCHER && !enemy.bowBroken && enemy.shootCooldown <= 0f && enemy.stunTimer <= 0f) {
+                enemy.shootCooldown = 2.8f + (0..10).random() * 0.1f
+                enemy.isAiming = false
+                val speed = 320f
+                val targetAngle = enemy.aimAngle
+                arrows.add(Arrow(
+                    x = enemy.x + kotlin.math.cos(targetAngle) * 16f,
+                    y = enemy.y + kotlin.math.sin(targetAngle) * 16f,
+                    vx = kotlin.math.cos(targetAngle) * speed,
+                    vy = kotlin.math.sin(targetAngle) * speed,
+                    isPlayerArrow = false
+                ))
                 sound.playShoot()
             }
         }
         enemies.removeAll { !it.active || it.y > cameraY + GameConstants.GAME_HEIGHT + 150f }
 
-        // Update Arrows
+        // Update Arrows (Enemy and Player)
         for (arrow in arrows) {
-            arrow.update(dt)
+            arrow.update(simDt)
             if (!arrow.active) continue
 
+            if (arrow.isPlayerArrow) {
+                // Player arrow hits enemies!
+                for (enemy in enemies) {
+                    if (!enemy.active) continue
+                    val edist = hypot(enemy.x - arrow.x, enemy.y - arrow.y)
+                    if (edist < 26f) {
+                        enemy.active = false
+                        arrow.active = false
+                        sound.playStomp()
+                        coinCount += 10
+                        spawnFloatingText(enemy.x, enemy.y, "🎯 BULLSEYE! +10 🪙", Color(0xFF38BDF8))
+                        spawnExplosionParticles(enemy.x, enemy.y, Color(0xFF38BDF8))
+                        break
+                    }
+                }
+                continue
+            }
+
+            // Enemy arrows hitting player
             val dist = hypot(player.centerX - arrow.x, player.centerY - arrow.y)
             if (dist < 24f) {
                 if (player.hasShield) {
@@ -264,6 +363,71 @@ class GameEngine(
             }
         }
         arrows.removeAll { !it.active }
+
+        // Periodic Falling Hazards (1 to 6 rocks)
+        hazardTimer -= dt
+        if (hazardTimer <= 0f) {
+            hazardTimer = 4.5f + (0..30).random() * 0.1f
+            spawnFallingHazards()
+        }
+
+        // Update Falling Hazards
+        for (h in hazards) {
+            h.update(simDt, cameraY)
+            if (!h.active || h.warningTimer > 0f) continue
+
+            // Rock hits player
+            val dist = hypot(player.centerX - h.x, player.centerY - h.y)
+            if (dist < h.radius + player.width * 0.42f) {
+                h.active = false
+                if (player.hasJetpack) {
+                    spawnDustParticles(player.centerX, player.centerY)
+                    spawnFloatingText(player.centerX, player.centerY, "🚀 DEFLECTED!", Color(0xFFF97316))
+                } else if (player.hasShield) {
+                    player.hasShield = false
+                    player.vy = -1450f
+                    sound.playPowerUp()
+                    spawnFloatingText(player.centerX, player.centerY, "🛡️ SHIELD SAVED ROCK!", Color(0xFF38BDF8))
+                    spawnExplosionParticles(player.centerX, player.centerY, Color(0xFF38BDF8))
+                } else {
+                    gameOver("Crushed by falling rock!")
+                    return
+                }
+            }
+
+            // Falling rock crushes enemies (Zombie, Archer, Slime, Goblin)
+            if (h.active) {
+                for (e in enemies) {
+                    if (!e.active) continue
+                    val edist = hypot(e.x - h.x, e.y - h.y)
+                    if (edist < h.radius + e.width * 0.5f) {
+                        e.active = false
+                        h.active = false
+                        sound.playStomp()
+                        spawnExplosionParticles(e.x, e.y, Color(0xFFF97316))
+                        spawnFloatingText(e.x, e.y, "💥 CRUSHED!", Color(0xFFF97316))
+                        break
+                    }
+                }
+            }
+
+            // Falling rock crushes / scares merchants
+            if (h.active) {
+                for (m in merchants) {
+                    if (!m.active) continue
+                    val mdist = hypot(m.x - h.x, m.y - h.y)
+                    if (mdist < h.radius + 24f) {
+                        m.active = false
+                        h.active = false
+                        sound.playStomp()
+                        spawnDustParticles(m.x, m.y)
+                        spawnFloatingText(m.x, m.y, "💨 MERCHANT FLED!", Color(0xFFFBBF24))
+                        break
+                    }
+                }
+            }
+        }
+        hazards.removeAll { !it.active || it.y > cameraY + GameConstants.GAME_HEIGHT + 150f }
 
         // Update Diamonds (Relics)
         val magnetRange = if (player.hasMagnet) {
@@ -335,7 +499,7 @@ class GameEngine(
 
         // Update Lava
         val lavaSpeed = if (heightMeters < 25) 25f else (75f + min(60f, (heightMeters - 25) * 0.2f))
-        lavaY -= lavaSpeed * dt
+        lavaY -= lavaSpeed * simDt
         val maxLagY = cameraY + GameConstants.GAME_HEIGHT + 220f
         if (lavaY > maxLagY) lavaY = maxLagY
 
@@ -384,11 +548,34 @@ class GameEngine(
 
     fun shootArrow() {
         if (state != GameState.PLAYING) return
-        // Fire arrow in player facing direction or upwards
         val dir = if (player.vx >= 0f) 1f else -1f
-        arrows.add(Arrow(player.centerX, player.centerY, dir * 320f))
+        val angle = if (dir > 0f) -1.047f else -2.094f
+        val speed = 360f
+        arrows.add(Arrow(
+            x = player.centerX,
+            y = player.centerY - 10f,
+            vx = kotlin.math.cos(angle) * speed,
+            vy = kotlin.math.sin(angle) * speed,
+            isPlayerArrow = true
+        ))
         sound.playShoot()
-        spawnFloatingText(player.centerX, player.centerY - 20f, "SWOOSH!", Color.White)
+        if (player.arrowAmmo > 0) {
+            player.arrowAmmo--
+            spawnFloatingText(player.centerX, player.centerY - 20f, "🏹 ARROW FIRED! (${player.arrowAmmo} left)", Color(0xFF38BDF8))
+        } else {
+            spawnFloatingText(player.centerX, player.centerY - 20f, "🏹 ARROW FIRED!", Color(0xFF38BDF8))
+        }
+    }
+
+    fun spawnFallingHazards() {
+        val count = (1..6).random()
+        val step = (GameConstants.GAME_WIDTH - 60f) / count.coerceAtLeast(1)
+        for (i in 0 until count) {
+            val minX = 30f + i * step
+            val maxX = minX + step - 20f
+            val x = (minX + Math.random().toFloat() * (maxX - minX)).coerceIn(24f, GameConstants.GAME_WIDTH - 24f)
+            hazards.add(FallingHazard(x = x, y = cameraY - 40f))
+        }
     }
 
     fun gameOver(reason: String) {

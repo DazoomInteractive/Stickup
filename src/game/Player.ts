@@ -58,6 +58,9 @@ export class Player {
   multiplierTimer = 0;
   multiplierMax = 4.0;
 
+  // Arrow Ammo (looted from Archer Elves!)
+  arrowAmmo = 0;
+
   // Invulnerability state (damage protection / blinking)
   invulnerableTimer = 0;
 

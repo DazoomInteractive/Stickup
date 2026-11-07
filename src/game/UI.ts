@@ -106,10 +106,22 @@ export class UI {
       x: (GAME_WIDTH - btnW) / 2,
       y: GAME_HEIGHT * 0.66,
       width: btnW,
-      height: 48,
+      height: 44,
       color: '#7c3aed',
       hoverColor: '#8b5cf6',
       activeColor: '#6d28d9',
+      onClick: () => {},
+    };
+
+    this.buttons.mainMenuGameOver = {
+      label: '🏠  MAIN MENU',
+      x: (GAME_WIDTH - btnW) / 2,
+      y: GAME_HEIGHT * 0.73,
+      width: btnW,
+      height: 44,
+      color: '#475569',
+      hoverColor: '#64748b',
+      activeColor: '#334155',
       onClick: () => {},
     };
 
@@ -249,6 +261,7 @@ export class UI {
 
   setMainMenuCallback(cb: () => void): void {
     this.buttons.mainMenu.onClick = cb;
+    this.buttons.mainMenuGameOver.onClick = cb;
   }
 
   setPauseTriggerCallback(cb: () => void): void {
@@ -281,6 +294,7 @@ export class UI {
       this.hoverScale.recoverDiamonds = adsAvailable && this.gameOverCanRecover && this.contains(this.buttons.recoverDiamonds, px, py) ? 1.05 : 1;
       this.hoverScale.restart = this.contains(this.buttons.restart, px, py) ? 1.06 : 1;
       this.hoverScale.shopGameOver = this.contains(this.buttons.shopGameOver, px, py) ? 1.05 : 1;
+      this.hoverScale.mainMenuGameOver = this.contains(this.buttons.mainMenuGameOver, px, py) ? 1.05 : 1;
     } else if (state === STATE.PAUSED) {
       const pauseKeys = ['resume', 'restartPause', 'soundToggle', 'mainMenu', 'privacyPause'];
       for (const k of pauseKeys) {
@@ -364,6 +378,12 @@ export class UI {
       if (this.contains(this.buttons.shopGameOver, px, py)) {
         this.pressScale.shopGameOver = 0.92;
         this.buttons.shopGameOver.onClick();
+        return true;
+      }
+
+      if (this.contains(this.buttons.mainMenuGameOver, px, py)) {
+        this.pressScale.mainMenuGameOver = 0.92;
+        this.buttons.mainMenuGameOver.onClick();
         return true;
       }
     }
@@ -1214,12 +1234,12 @@ export class UI {
     // Saved Diamonds (25% base kept)
     ctx.fillStyle = '#0284c7';
     ctx.font = 'bold 15px Roboto, sans-serif';
-    ctx.fillText(`💎 SAQLANDI: +${relics} (25%)`, GAME_WIDTH / 2, cardY + 88);
+    ctx.fillText(`💎 SAVED: +${relics} (25%)`, GAME_WIDTH / 2, cardY + 88);
 
     if (lostRelics > 0) {
       ctx.fillStyle = '#ef4444';
       ctx.font = '600 12px Roboto, sans-serif';
-      ctx.fillText(`⚠️ Yo'qotildi: -${lostRelics} (75% tubsizlikda)`, GAME_WIDTH / 2, cardY + 112);
+      ctx.fillText(`⚠️ Lost: -${lostRelics} (75% to abyss)`, GAME_WIDTH / 2, cardY + 112);
     }
 
     // Best score line with highlight
@@ -1227,19 +1247,19 @@ export class UI {
     if (isNewBest) {
       ctx.fillStyle = '#d97706';
       ctx.font = '900 14px Roboto, sans-serif';
-      ctx.fillText(`★ YANGI REKORD: ${bestScore}m! ★`, GAME_WIDTH / 2, bestY);
+      ctx.fillText(`★ NEW RECORD: ${bestScore}m! ★`, GAME_WIDTH / 2, bestY);
     } else {
       ctx.fillStyle = '#64748b';
       ctx.font = '600 13px Roboto, sans-serif';
-      ctx.fillText(`Eng yaxshi rekord: ${bestScore}m`, GAME_WIDTH / 2, bestY);
+      ctx.fillText(`Personal Best: ${bestScore}m`, GAME_WIDTH / 2, bestY);
     }
     ctx.restore();
 
     // Dynamically position action and rewarded ad buttons
-    let curY = cardY + cardH + 12;
+    let curY = cardY + cardH + 10;
     const btnW = 270;
-    const btnH = 44;
-    const gap = 8;
+    const btnH = 40;
+    const gap = 7;
 
     // 1. Recover Diamonds Ad Button (+25% back -> total 50%)
     if (adsAvailable) {
@@ -1253,14 +1273,14 @@ export class UI {
         const targetTotal = Math.ceil(totalRelics * 0.5);
         const recoverable = lostRelics > 0 ? Math.max(1, targetTotal - relics) : 1;
         this.buttons.recoverDiamonds.label = lostRelics > 0
-          ? `📺 QUTQARISH +${recoverable} 💎 (+25%)`
-          : '📺 BONUS +1 💎 (REKLAMA)';
+          ? `📺 RECOVER +${recoverable} 💎 (+25%)`
+          : '📺 BONUS +1 💎 (REWARD AD)';
         this.buttons.recoverDiamonds.color = '#059669';
         this.buttons.recoverDiamonds.hoverColor = '#10b981';
         this.drawButton(ctx, 'recoverDiamonds');
       } else {
         const shownRecovered = recoveredAmount > 0 ? recoveredAmount : 1;
-        this.buttons.recoverDiamonds.label = `✓ +${shownRecovered} 💎 QUTQARILDI (50%)`;
+        this.buttons.recoverDiamonds.label = `✓ RECOVERED +${shownRecovered} 💎 (50%)`;
         this.buttons.recoverDiamonds.color = '#64748b';
         this.buttons.recoverDiamonds.hoverColor = '#64748b';
         this.drawButton(ctx, 'recoverDiamonds');
@@ -1281,12 +1301,12 @@ export class UI {
       this.buttons.revive.height = btnH;
 
       if (canRevive) {
-        this.buttons.revive.label = '❤️ TIRILISH 🚀 (1x REKLAMA)';
+        this.buttons.revive.label = '❤️ REVIVE & RESCUE 🚀 (1x AD)';
         this.buttons.revive.color = '#ea580c';
         this.buttons.revive.hoverColor = '#f97316';
         this.drawButton(ctx, 'revive');
       } else {
-        this.buttons.revive.label = '✓ TIRILISH ISHLATILDI';
+        this.buttons.revive.label = '✓ REVIVED THIS RUN';
         this.buttons.revive.color = '#64748b';
         this.buttons.revive.hoverColor = '#64748b';
         this.drawButton(ctx, 'revive');
@@ -1317,11 +1337,22 @@ export class UI {
     this.buttons.shopGameOver.width = btnW;
     this.buttons.shopGameOver.height = btnH;
     this.drawButton(ctx, 'shopGameOver');
+    curY += btnH + gap;
+
+    // 5. Main Menu button
+    this.buttons.mainMenuGameOver.label = `🏠 MAIN MENU`;
+    this.buttons.mainMenuGameOver.x = (GAME_WIDTH - btnW) / 2;
+    this.buttons.mainMenuGameOver.y = curY;
+    this.buttons.mainMenuGameOver.width = btnW;
+    this.buttons.mainMenuGameOver.height = btnH;
+    this.buttons.mainMenuGameOver.color = '#475569';
+    this.buttons.mainMenuGameOver.hoverColor = '#64748b';
+    this.drawButton(ctx, 'mainMenuGameOver');
 
     // Hint
     ctx.fillStyle = COLORS.text;
-    ctx.font = '400 12.5px Roboto, sans-serif';
-    ctx.fillText('Tap button to play again', GAME_WIDTH / 2, curY + btnH + 18);
+    ctx.font = '400 12px Roboto, sans-serif';
+    ctx.fillText('Tap button to play again', GAME_WIDTH / 2, curY + btnH + 16);
 
     ctx.globalAlpha = 1;
   }
@@ -2067,20 +2098,29 @@ export class UI {
       this.drawPaginationControls(ctx, cardX, cardW, contentY + 4 * (rowH + 8) + 8, curPage, totalPages);
     }
 
-    // Close / Back button at bottom
-    const closeW = 240;
-    const closeH = 42;
-    const closeX = (GAME_WIDTH - closeW) / 2;
-    const closeY = cardY + cardH - closeH - 14;
+    // Bottom Dual Navigation Buttons: MAIN MENU & PLAY GAME
+    const bottomBtnW = 180;
+    const bottomBtnH = 42;
+    const bottomGap = 16;
+    const bottomTotalW = bottomBtnW * 2 + bottomGap;
+    const bottomStartX = (GAME_WIDTH - bottomTotalW) / 2;
+    const bottomY = cardY + cardH - bottomBtnH - 14;
 
-    ctx.fillStyle = '#334155';
-    this.roundRectPath(ctx, closeX, closeY, closeW, closeH, 12);
+    // 1. MAIN MENU button
+    ctx.fillStyle = '#475569';
+    this.roundRectPath(ctx, bottomStartX, bottomY, bottomBtnW, bottomBtnH, 12);
     ctx.fill();
-
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 13.5px Roboto, sans-serif';
-    ctx.fillText('◀  BACK TO GAME', closeX + closeW / 2, closeY + closeH / 2);
+    ctx.font = 'bold 13px Roboto, sans-serif';
+    ctx.fillText('🏠  MAIN MENU', bottomStartX + bottomBtnW / 2, bottomY + bottomBtnH / 2);
+
+    // 2. PLAY GAME button
+    ctx.fillStyle = '#16a34a';
+    this.roundRectPath(ctx, bottomStartX + bottomBtnW + bottomGap, bottomY, bottomBtnW, bottomBtnH, 12);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('🎮  PLAY GAME', bottomStartX + bottomBtnW + bottomGap + bottomBtnW / 2, bottomY + bottomBtnH / 2);
 
     ctx.restore();
   }
@@ -2135,13 +2175,21 @@ export class UI {
     const cardX = (GAME_WIDTH - cardW) / 2;
     const cardY = (GAME_HEIGHT - cardH) / 2;
 
-    // 1. Close button
-    const closeW = 240;
-    const closeH = 42;
-    const closeX = (GAME_WIDTH - closeW) / 2;
-    const closeY = cardY + cardH - closeH - 14;
-    if (px >= closeX - 15 && px <= closeX + closeW + 15 && py >= closeY - 10 && py <= closeY + closeH + 10) {
-      return 'close';
+    // 1. Bottom navigation buttons (MAIN MENU & PLAY GAME)
+    const bottomBtnW = 180;
+    const bottomBtnH = 42;
+    const bottomGap = 16;
+    const bottomTotalW = bottomBtnW * 2 + bottomGap;
+    const bottomStartX = (GAME_WIDTH - bottomTotalW) / 2;
+    const bottomY = cardY + cardH - bottomBtnH - 14;
+
+    if (py >= bottomY - 10 && py <= bottomY + bottomBtnH + 10) {
+      if (px >= bottomStartX - 10 && px <= bottomStartX + bottomBtnW + 8) {
+        return 'main_menu';
+      }
+      if (px >= bottomStartX + bottomBtnW + bottomGap - 8 && px <= bottomStartX + bottomTotalW + 12) {
+        return 'close';
+      }
     }
 
     // 2. Tab selection bar

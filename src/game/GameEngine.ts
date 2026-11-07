@@ -106,6 +106,7 @@ export class GameEngine {
   private initialBestScore = 0; // previous session record to show on the sky line
   private isNewBest = false;
   private recordCelebrated = false;
+  private hyperSpeedAnnounced = false;
 
   // Shop & Progression State
   private shop: ShopManager = new ShopManager();
@@ -228,6 +229,10 @@ export class GameEngine {
       if (this.isPrivacyModalOpen) return;
       if (this.state === STATE.MAIN_MENU || this.state === STATE.GAME_OVER) {
         this.startGame();
+        return;
+      }
+      if (this.state === STATE.PLAYING) {
+        this.shootPlayerArrow();
       }
     };
 
@@ -380,6 +385,23 @@ export class GameEngine {
     }
   }
 
+  shootPlayerArrow(): void {
+    if (this.state !== STATE.PLAYING) return;
+    if (this.player.arrowAmmo <= 0) return;
+    this.player.arrowAmmo--;
+    const dir = this.player.vx >= 0 ? 1 : -1;
+    const speed = 360;
+    const angle = dir > 0 ? -Math.PI / 3 : (-2 * Math.PI) / 3;
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+    this.arrows.push(new Arrow(this.player.centerX, this.player.centerY - 10, vx, vy, true));
+    this.audio.playShoot();
+    const sx = this.player.centerX;
+    const sy = this.camera.worldToScreenY(this.player.centerY);
+    this.vfx.spawnFloatingText(sx, sy, `🏹 ARROW FIRED! (${this.player.arrowAmmo} left)`, '#38bdf8');
+    this.triggerHaptic(20);
+  }
+
   pauseGame(): void {
     if (this.state !== STATE.PLAYING) return;
     this.state = STATE.PAUSED;
@@ -460,6 +482,7 @@ export class GameEngine {
     this.initialBestScore = this.bestScore;
     this.isNewBest = false;
     this.recordCelebrated = false;
+    this.hyperSpeedAnnounced = false;
     this.cleanupTimer = 0;
     this.generateInitialPlatforms();
   }
@@ -713,16 +736,34 @@ export class GameEngine {
     this.multipliers = this.multipliers.filter((m) => !m.collected && m.y < bottomWorldY);
   }
 
-  private spawnFallingHazard(): void {
-    // Target near player X with random offset
-    const offsetX = (Math.random() - 0.5) * 160;
-    const targetX = Math.max(35, Math.min(GAME_WIDTH - 35, this.player.centerX + offsetX));
+  private spawnFallingHazards(): void {
+    // Random 1 to 6 falling boulders as requested (any height, random waves)
+    const count = Math.floor(Math.random() * 6) + 1;
     const startY = this.camera.y - 40;
-    const hazard = new FallingHazard(targetX, startY);
-    hazard.warningTimer = 1.0; // 1 second advance warning at top of screen
-    this.hazards.push(hazard);
+    const chosenXs: number[] = [];
+
+    // Distribute X positions with minimum spacing so player has room to dodge
+    for (let i = 0; i < count; i++) {
+      let targetX = 35 + Math.random() * (GAME_WIDTH - 70);
+      let attempts = 0;
+      while (chosenXs.some((x) => Math.abs(x - targetX) < 48) && attempts < 15) {
+        targetX = 35 + Math.random() * (GAME_WIDTH - 70);
+        attempts++;
+      }
+      chosenXs.push(targetX);
+
+      const hazard = new FallingHazard(targetX, startY);
+      hazard.warningTimer = 1.0; // 1 second advance warning guideline at top of screen
+      this.hazards.push(hazard);
+    }
+
     this.audio.playError(); // Alert audio cue
-    this.triggerHaptic(25);
+    this.triggerHaptic([25, 35]);
+    if (count > 1) {
+      const sx = GAME_WIDTH / 2;
+      const sy = this.camera.worldToScreenY(startY + 80);
+      this.vfx.spawnFloatingText(sx, sy, `⚠️ ROCK SHOWER x${count}!`, '#ef4444');
+    }
   }
 
   // ---- Collision ----
@@ -926,18 +967,74 @@ export class GameEngine {
       if (Math.abs(dx) < (this.player.width + e.width) * 0.42 && Math.abs(dy) < (this.player.height + e.height) * 0.42) {
         // Did player stomp the enemy from above while falling?
         if (this.player.vy > 0 && this.player.feetY < e.y + 12) {
-          e.active = false;
-          this.player.bounce();
-          this.player.vy = -1150; // Extra bounce boost
-          this.audio.playEnemyStomp();
-          this.camera.shake(6, 0.22);
-          const sx = e.x;
-          const sy = this.camera.worldToScreenY(e.y);
-          this.vfx.spawnDust(sx, sy);
-          this.vfx.spawnFloatingText(sx, sy, 'STOMPED! +5 🪙', '#4ade80');
-          this.coinCount += 5;
-          this.addCoins(5);
-          this.triggerHaptic([20, 30]);
+          if (e.type === 'zombie') {
+            // ZOMBIE STOMP: Do NOT kill! Do NOT give coins! Stun for 1.8 seconds (dizzy 💫)!
+            e.stunTimer = 1.8;
+            e.dizzyAngle = 0;
+            e.isJumping = false;
+            e.vy = 0;
+            this.player.bounce();
+            this.player.vy = -1050; // High bounce boost
+            this.audio.playEnemyStomp();
+            this.camera.shake(4, 0.18);
+            const sx = e.x;
+            const sy = this.camera.worldToScreenY(e.y);
+            this.vfx.spawnDust(sx, sy);
+            this.vfx.spawnFloatingText(sx, sy, '💫 STUNNED! (1.8s)', '#fde047');
+            this.triggerHaptic([25, 35]);
+          } else if (e.type === 'archer') {
+            // ARCHER ELF STOMP: Do NOT give coins! Stun for 1.8s + 1 of 3 Random Outcomes!
+            e.stunTimer = 1.8;
+            e.dizzyAngle = 0;
+            e.isJumping = false;
+            e.vy = 0;
+            e.isAiming = false;
+            this.player.bounce();
+            this.player.vy = -1050; // High bounce boost
+            this.audio.playEnemyStomp();
+            this.camera.shake(4, 0.18);
+            const sx = e.x;
+            const sy = this.camera.worldToScreenY(e.y);
+            this.vfx.spawnDust(sx, sy);
+
+            const roll = Math.random();
+            if (roll < 0.33) {
+              // Outcome 1: Disarm & Ammo Loot (+2 Arrows)
+              this.player.arrowAmmo += 2;
+              this.vfx.spawnSparkle(sx, sy);
+              this.vfx.spawnFloatingText(sx, sy, '🏹 +2 ARROWS LOOTED!', '#38bdf8');
+              this.triggerHaptic([20, 30, 40]);
+            } else if (roll < 0.67) {
+              // Outcome 2: Broken Bow (permanently cannot shoot)
+              e.bowBroken = true;
+              this.vfx.spawnFloatingText(sx, sy, '💥 BOW BROKEN!', '#ef4444');
+              this.triggerHaptic([35, 45]);
+            } else {
+              // Outcome 3: Wild Dizzy Shot
+              const wildAngle = (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.8) - Math.PI / 2;
+              const speed = 310;
+              this.arrows.push(new Arrow(e.x, e.y, Math.cos(wildAngle) * speed, Math.sin(wildAngle) * speed, false));
+              this.vfx.spawnFloatingText(sx, sy, '🌀 WILD SHOT!', '#f59e0b');
+              this.triggerHaptic([20, 20]);
+            }
+          } else {
+            // Slime or Goblin: normal stomp kill +5 coins
+            e.active = false;
+            this.player.bounce();
+            this.player.vy = -1150; // Extra bounce boost
+            this.audio.playEnemyStomp();
+            this.camera.shake(6, 0.22);
+            const sx = e.x;
+            const sy = this.camera.worldToScreenY(e.y);
+            this.vfx.spawnDust(sx, sy);
+            this.vfx.spawnFloatingText(sx, sy, 'STOMPED! +5 🪙', '#4ade80');
+            this.coinCount += 5;
+            this.addCoins(5);
+            this.triggerHaptic([20, 30]);
+          }
+        } else if (e.stunTimer > 0) {
+          // Stunned enemy cannot hurt the player - pass through safely
+          continue;
         } else if (this.player.hasJetpack) {
           // Jetpack invincibility destroys enemy without consuming shield
           e.active = false;
@@ -997,6 +1094,48 @@ export class GameEngine {
           return;
         }
       }
+
+      // Falling rocks crush enemies on contact (Zombie, Archer, Slime, Goblin)
+      if (h.active) {
+        for (const e of this.enemies) {
+          if (!e.active) continue;
+          const edx = e.x - h.x;
+          const edy = e.y - h.y;
+          const edist = Math.sqrt(edx * edx + edy * edy);
+          if (edist < h.radius + e.width * 0.5) {
+            e.active = false;
+            h.active = false;
+            this.audio.playEnemyStomp();
+            this.camera.shake(5, 0.2);
+            const sx = e.x;
+            const sy = this.camera.worldToScreenY(e.y);
+            this.vfx.spawnDust(sx, sy);
+            this.vfx.spawnFloatingText(sx, sy, '💥 CRUSHED!', '#f97316');
+            break;
+          }
+        }
+      }
+
+      // Falling rocks crush / scare merchants on contact
+      if (h.active) {
+        for (const m of this.merchants) {
+          if (!m.active) continue;
+          const mdx = m.x - h.x;
+          const mdy = m.y - h.y;
+          const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+          if (mdist < h.radius + 24) {
+            m.active = false;
+            h.active = false;
+            this.audio.playEnemyStomp();
+            this.camera.shake(5, 0.2);
+            const sx = m.x;
+            const sy = this.camera.worldToScreenY(m.y);
+            this.vfx.spawnDust(sx, sy);
+            this.vfx.spawnFloatingText(sx, sy, '💨 MERCHANT FLED!', '#fbbf24');
+            break;
+          }
+        }
+      }
     }
 
     // Coins (Legacy compatibility / bonus)
@@ -1019,9 +1158,36 @@ export class GameEngine {
       }
     }
 
-    // Arrows (Fired by Archer Enemies)
+    // Arrows (Fired by Archer Enemies or Player)
     for (const a of this.arrows) {
       if (!a.active) continue;
+
+      if (a.isPlayerArrow) {
+        // Player's arrows hit and defeat enemies!
+        for (const e of this.enemies) {
+          if (!e.active) continue;
+          const edx = e.x - a.x;
+          const edy = e.y - a.y;
+          const edist = Math.sqrt(edx * edx + edy * edy);
+          if (edist < a.radius + e.width * 0.5) {
+            e.active = false;
+            a.active = false;
+            this.audio.playEnemyStomp();
+            this.camera.shake(4, 0.15);
+            const sx = e.x;
+            const sy = this.camera.worldToScreenY(e.y);
+            this.vfx.spawnDust(sx, sy);
+            this.vfx.spawnFloatingText(sx, sy, '🎯 BULLSEYE! +10 🪙', '#38bdf8');
+            this.coinCount += 10;
+            this.addCoins(10);
+            this.triggerHaptic([20, 30]);
+            break;
+          }
+        }
+        continue;
+      }
+
+      // Enemy arrows hitting player
       const dx = this.player.centerX - a.x;
       const dy = this.player.centerY - a.y;
       if (Math.abs(dx) < (this.player.width + a.width) * 0.4 && Math.abs(dy) < (this.player.height + a.height) * 0.4) {
@@ -1227,29 +1393,52 @@ export class GameEngine {
         }
       }
 
+      // 1000m+ Dynamic Speed Scaling: +50% speed increase
+      const isHyperSpeed = this.height >= 1000;
+      const speedMultiplier = isHyperSpeed
+        ? 1.5
+        : 1.0 + Math.min(0.5, Math.max(0, this.height - 250) / 1500);
+
+      if (isHyperSpeed && !this.hyperSpeedAnnounced) {
+        this.hyperSpeedAnnounced = true;
+        this.audio.playSpring();
+        this.camera.shake(8, 0.35);
+        this.vfx.spawnFloatingText(GAME_WIDTH / 2, GAME_HEIGHT * 0.4, '⚡ 1000m+ HYPER SPEED (+50%)! 🚀', '#f59e0b');
+        this.triggerHaptic([30, 40, 60]);
+      }
+
+      const simDt = dt * speedMultiplier;
+
       // Camera follows player upward only (never scrolls down)
       this.camera.update(this.player.y, dt);
 
-      for (const p of this.platforms) p.update(dt);
+      for (const p of this.platforms) p.update(simDt);
       for (const r of this.relics) r.update(dt);
       for (const hp of this.heartPickups) hp.update(dt);
       for (const m of this.merchants) m.update(dt);
       for (const c of this.coins) c.update(dt);
-      for (const e of this.enemies) e.update(dt);
-      for (const a of this.arrows) a.update(dt);
-      for (const h of this.hazards) h.update(dt, this.camera.y);
+      for (const e of this.enemies) {
+        e.update(simDt, this.player.centerX, this.player.centerY, this.platforms);
+        if (e.pendingArrows && e.pendingArrows.length > 0) {
+          for (const arr of e.pendingArrows) {
+            this.arrows.push(arr);
+            this.audio.playShoot();
+          }
+          e.pendingArrows = [];
+        }
+      }
+      for (const a of this.arrows) a.update(simDt);
+      for (const h of this.hazards) h.update(simDt, this.camera.y);
       for (const s of this.shields) s.update(dt);
       for (const j of this.jetpacks) j.update(dt);
       for (const m of this.magnets) m.update(dt);
       for (const m of this.multipliers) m.update(dt);
 
-      // Periodic Falling Boulders (⚠️ Adrenaline Rocks start after 400m)
-      if (this.height >= HAZARD_MIN_METER) {
-        this.hazardTimer -= dt;
-        if (this.hazardTimer <= 0) {
-          this.hazardTimer = HAZARD_INTERVAL_MIN + Math.random() * (HAZARD_INTERVAL_MAX - HAZARD_INTERVAL_MIN);
-          this.spawnFallingHazard();
-        }
+      // Periodic Falling Boulders (Random 1 to 6 hazards anywhere throughout the run)
+      this.hazardTimer -= dt;
+      if (this.hazardTimer <= 0) {
+        this.hazardTimer = HAZARD_INTERVAL_MIN + Math.random() * (HAZARD_INTERVAL_MAX - HAZARD_INTERVAL_MIN);
+        this.spawnFallingHazards();
       }
 
       // Jetpack continuous thruster exhaust
@@ -1316,7 +1505,7 @@ export class GameEngine {
       }
 
       // Update Rising Lava mechanic
-      this.lava.update(dt, this.height, this.camera.y, this.vfx);
+      this.lava.update(simDt, this.height, this.camera.y, this.vfx);
 
       // Check if player touched the rising lava
       if (this.lava.touches(this.player.feetY)) {
@@ -1914,6 +2103,11 @@ export class GameEngine {
 
     if (action === 'close') {
       this.closeShop();
+      return;
+    }
+    if (action === 'main_menu') {
+      this.closeShop();
+      this.goToMainMenu();
       return;
     }
 

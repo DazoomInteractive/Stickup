@@ -184,6 +184,10 @@ fun StickUpGameScreen(
                 onDismiss = { showShop = false },
                 onApplyCustomization = {
                     engine.applyEquippedCustomization()
+                },
+                onNavigateToMenu = {
+                    showShop = false
+                    engine.state = GameState.MAIN_MENU
                 }
             )
         }
@@ -523,6 +527,18 @@ fun GameOverOverlay(
                         Text("💚 REVIVE WITH SHIELD", fontWeight = FontWeight.Black, color = Color.White)
                     }
                     Spacer(modifier = Modifier.height(10.dp))
+                } else {
+                    OutlinedButton(
+                        onClick = {},
+                        enabled = false,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(42.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("✔ REVIVED THIS RUN", fontWeight = FontWeight.Bold, color = Color(0xFF64748B), fontSize = 13.sp)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
 
                 Button(
@@ -533,31 +549,33 @@ fun GameOverOverlay(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("PLAY AGAIN", fontWeight = FontWeight.Black, color = Color.Black)
+                    Text("🔄 RESTART", fontWeight = FontWeight.Black, color = Color.Black)
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Button(
+                    onClick = onShop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Button(
-                        onClick = onShop,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("SHOP", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                    Button(
-                        onClick = onMenu,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("MENU", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
+                    Text("🛒 SHOP & UPGRADES", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                    onClick = onMenu,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("🏠 MAIN MENU", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }

@@ -121,21 +121,73 @@ fun GameCanvas(
             drawEnemy(screenX, screenY, scaleFactor, enemy)
         }
 
-        // 5. Draw Arrows
+        // 5. Draw Arrows (Enemy and Player)
         for (arrow in engine.arrows) {
             val screenX = arrow.x * scaleFactor
             val screenY = (arrow.y - cameraY) * scaleFactor
-            drawLine(
-                color = Color(0xFF78350F),
-                start = Offset(screenX - 10f * scaleFactor, screenY),
-                end = Offset(screenX + 10f * scaleFactor, screenY),
-                strokeWidth = 3f * scaleFactor
-            )
-            drawCircle(
-                color = Color(0xFFCBD5E1),
-                radius = 4f * scaleFactor,
-                center = Offset(screenX + (if (arrow.vx > 0) 10f else -10f) * scaleFactor, screenY)
-            )
+            val angleDeg = arrow.angle * 57.2958f
+            rotate(angleDeg, Offset(screenX, screenY)) {
+                val shaftColor = if (arrow.isPlayerArrow) Color(0xFF0284C7) else Color(0xFF78350F)
+                val tipColor = if (arrow.isPlayerArrow) Color(0xFF38BDF8) else Color(0xFFCBD5E1)
+                drawLine(
+                    color = shaftColor,
+                    start = Offset(screenX - 12f * scaleFactor, screenY),
+                    end = Offset(screenX + 12f * scaleFactor, screenY),
+                    strokeWidth = 3f * scaleFactor
+                )
+                drawCircle(
+                    color = tipColor,
+                    radius = 4f * scaleFactor,
+                    center = Offset(screenX + 12f * scaleFactor, screenY)
+                )
+            }
+        }
+
+        // 5b. Draw Falling Hazards (Rocks & Warning Beams)
+        for (h in engine.hazards) {
+            val screenX = h.x * scaleFactor
+            val screenY = (h.y - cameraY) * scaleFactor
+
+            if (h.warningTimer > 0f) {
+                // Danger Column Guideline
+                drawLine(
+                    color = Color(0x66EF4444),
+                    start = Offset(screenX, 60f * scaleFactor),
+                    end = Offset(screenX, size.height),
+                    strokeWidth = 2f * scaleFactor
+                )
+                // Warning circle marker
+                drawCircle(
+                    color = Color(0xFFEF4444),
+                    radius = 14f * scaleFactor,
+                    center = Offset(screenX, 55f * scaleFactor)
+                )
+                drawCircle(
+                    color = Color.White,
+                    radius = 11f * scaleFactor,
+                    center = Offset(screenX, 55f * scaleFactor),
+                    style = Stroke(width = 2f * scaleFactor)
+                )
+            } else {
+                // Plunging Rock
+                rotate(h.rotation * 57.2958f, Offset(screenX, screenY)) {
+                    drawCircle(
+                        color = Color(0xFFFF5722).copy(alpha = 0.5f),
+                        radius = h.radius * 1.4f * scaleFactor,
+                        center = Offset(screenX, screenY - 8f * scaleFactor)
+                    )
+                    drawCircle(
+                        color = Color(0xFF334155),
+                        radius = h.radius * scaleFactor,
+                        center = Offset(screenX, screenY)
+                    )
+                    drawCircle(
+                        color = Color(0xFFFF9800),
+                        radius = 4f * scaleFactor,
+                        center = Offset(screenX + 2f * scaleFactor, screenY + 2f * scaleFactor)
+                    )
+                }
+            }
         }
 
         // 6. Draw Diamonds (Relics)
@@ -255,7 +307,223 @@ private fun DrawScope.drawEnemy(x: Float, y: Float, scale: Float, enemy: Enemy) 
     val w = 15f * scale
     val h = 13f * scale
 
-    if (enemy.type == EnemyType.SLIME) {
+    if (enemy.type == EnemyType.ARCHER) {
+        val isStunned = enemy.stunTimer > 0f
+        val facing = enemy.facing
+
+        // Hooded tunic / cloak (Forest green)
+        drawRoundRect(
+            color = Color(0xFF166534),
+            topLeft = Offset(x - 9f * scale, y - 5f * scale + squish),
+            size = Size(18f * scale, 19f * scale),
+            cornerRadius = CornerRadius(4f * scale, 4f * scale)
+        )
+        // Belt with golden buckle
+        drawRect(
+            color = Color(0xFF78350F),
+            topLeft = Offset(x - 9f * scale, y + 4f * scale + squish),
+            size = Size(18f * scale, 3.5f * scale)
+        )
+        drawCircle(color = Color(0xFFFBBF24), radius = 2f * scale, center = Offset(x, y + 5.5f * scale + squish))
+
+        // Elf Head with fair skin
+        drawCircle(
+            color = Color(0xFFFEF08A),
+            radius = 10f * scale,
+            center = Offset(x, y - 11f * scale + squish)
+        )
+        // Green Hood top
+        drawArc(
+            color = Color(0xFF15803D),
+            startAngle = 180f,
+            sweepAngle = 180f,
+            useCenter = true,
+            topLeft = Offset(x - 11f * scale, y - 22f * scale + squish),
+            size = Size(22f * scale, 18f * scale)
+        )
+
+        // Pointed elf ear
+        val earX = if (facing > 0) x - 10f * scale else x + 10f * scale
+        drawOval(
+            color = Color(0xFFFEF08A),
+            topLeft = Offset(earX - 2.5f * scale, y - 14f * scale + squish),
+            size = Size(5f * scale, 9f * scale)
+        )
+
+        // Eyes
+        val eyeDir = facing * 2.5f * scale
+        if (isStunned) {
+            // Dizzy X eyes
+            drawLine(
+                color = Color(0xFF991B1B),
+                start = Offset(x - 5f * scale + eyeDir, y - 13f * scale + squish),
+                end = Offset(x - 2f * scale + eyeDir, y - 9f * scale + squish),
+                strokeWidth = 1.8f * scale
+            )
+            drawLine(
+                color = Color(0xFF991B1B),
+                start = Offset(x - 2f * scale + eyeDir, y - 13f * scale + squish),
+                end = Offset(x - 5f * scale + eyeDir, y - 9f * scale + squish),
+                strokeWidth = 1.8f * scale
+            )
+            drawLine(
+                color = Color(0xFF991B1B),
+                start = Offset(x + 2f * scale + eyeDir, y - 13f * scale + squish),
+                end = Offset(x + 5f * scale + eyeDir, y - 9f * scale + squish),
+                strokeWidth = 1.8f * scale
+            )
+            drawLine(
+                color = Color(0xFF991B1B),
+                start = Offset(x + 5f * scale + eyeDir, y - 13f * scale + squish),
+                end = Offset(x + 2f * scale + eyeDir, y - 9f * scale + squish),
+                strokeWidth = 1.8f * scale
+            )
+
+            // Orbiting dizzy stars
+            for (i in 0..2) {
+                val angle = (enemy.dizzyAngle * 3f + (i * Math.PI.toFloat() * 2f) / 3f)
+                val starX = x + kotlin.math.cos(angle) * 16f * scale
+                val starY = y - 25f * scale + kotlin.math.sin(angle) * 5f * scale
+                drawCircle(color = Color(0xFFFDE047), radius = 3f * scale, center = Offset(starX, starY))
+                drawCircle(color = Color.White, radius = 1.2f * scale, center = Offset(starX, starY))
+            }
+        } else {
+            // Keen elven archer eyes
+            drawCircle(color = Color.White, radius = 3f * scale, center = Offset(x - 3.5f * scale + eyeDir, y - 11f * scale + squish))
+            drawCircle(color = Color.White, radius = 3f * scale, center = Offset(x + 3.5f * scale + eyeDir, y - 11f * scale + squish))
+            drawCircle(color = Color(0xFF047857), radius = 1.6f * scale, center = Offset(x - 3.5f * scale + eyeDir * 1.2f, y - 11f * scale + squish))
+            drawCircle(color = Color(0xFF047857), radius = 1.6f * scale, center = Offset(x + 3.5f * scale + eyeDir * 1.2f, y - 11f * scale + squish))
+        }
+
+        // Recurve Bow & Arrow Aiming
+        if (enemy.bowBroken) {
+            // Broken splintered bow on ground/side
+            drawLine(
+                color = Color(0xFF78350F),
+                start = Offset(x + facing * 8f * scale, y + 2f * scale),
+                end = Offset(x + facing * 14f * scale, y + 10f * scale),
+                strokeWidth = 2.5f * scale
+            )
+            drawLine(
+                color = Color(0xFF78350F),
+                start = Offset(x + facing * 12f * scale, y + 12f * scale),
+                end = Offset(x + facing * 18f * scale, y + 8f * scale),
+                strokeWidth = 2f * scale
+            )
+        } else {
+            // Wooden bow
+            val bowDist = 12f * scale
+            val bowAngleDeg = if (enemy.isAiming) enemy.aimAngle * 57.2958f else (if (facing > 0) 0f else 180f)
+            rotate(bowAngleDeg, Offset(x, y - 5f * scale + squish)) {
+                // Curved bow arc
+                drawArc(
+                    color = Color(0xFFB45309),
+                    startAngle = -60f,
+                    sweepAngle = 120f,
+                    useCenter = false,
+                    topLeft = Offset(x + bowDist - 6f * scale, y - 14f * scale + squish),
+                    size = Size(12f * scale, 18f * scale),
+                    style = Stroke(width = 2.5f * scale)
+                )
+                // Bowstring
+                drawLine(
+                    color = Color(0xFFF1F5F9),
+                    start = Offset(x + bowDist, y - 14f * scale + squish),
+                    end = Offset(x + bowDist, y + 4f * scale + squish),
+                    strokeWidth = 1f * scale
+                )
+                // Drawn arrow if aiming
+                if (enemy.isAiming) {
+                    drawLine(
+                        color = Color(0xFFF59E0B),
+                        start = Offset(x + 2f * scale, y - 5f * scale + squish),
+                        end = Offset(x + bowDist + 8f * scale, y - 5f * scale + squish),
+                        strokeWidth = 2f * scale
+                    )
+                    // Arrowhead
+                    drawCircle(color = Color(0xFFEF4444), radius = 2f * scale, center = Offset(x + bowDist + 8f * scale, y - 5f * scale + squish))
+                }
+            }
+        }
+    } else if (enemy.type == EnemyType.ZOMBIE) {
+        val isStunned = enemy.stunTimer > 0f
+        val eyeDir = enemy.facing * 2.5f * scale
+
+        // Tattered clothes
+        drawRoundRect(
+            color = Color(0xFF4C1D95),
+            topLeft = Offset(x - 10f * scale, y - 4f * scale + squish),
+            size = Size(20f * scale, 18f * scale),
+            cornerRadius = CornerRadius(4f * scale, 4f * scale)
+        )
+
+        // Rotten green zombie head
+        drawCircle(
+            color = Color(0xFF16A34A),
+            radius = 11f * scale,
+            center = Offset(x, y - 10f * scale + squish)
+        )
+
+        // Brain scar / stitch
+        drawLine(
+            color = Color(0xFF14532D),
+            start = Offset(x - 5f * scale, y - 17f * scale + squish),
+            end = Offset(x + 2f * scale, y - 19f * scale + squish),
+            strokeWidth = 1.5f * scale
+        )
+
+        // Outstretched zombie arms
+        val armX = if (enemy.facing > 0) x else x - 16f * scale
+        drawRoundRect(
+            color = Color(0xFF15803D),
+            topLeft = Offset(armX, y - 2f * scale + squish),
+            size = Size(16f * scale, 5f * scale),
+            cornerRadius = CornerRadius(2f * scale, 2f * scale)
+        )
+
+        if (isStunned) {
+            // Dizzy X eyes
+            drawLine(
+                color = Color(0xFFFEF08A),
+                start = Offset(x - 6f * scale + eyeDir, y - 13f * scale + squish),
+                end = Offset(x - 2f * scale + eyeDir, y - 9f * scale + squish),
+                strokeWidth = 1.8f * scale
+            )
+            drawLine(
+                color = Color(0xFFFEF08A),
+                start = Offset(x - 2f * scale + eyeDir, y - 13f * scale + squish),
+                end = Offset(x - 6f * scale + eyeDir, y - 9f * scale + squish),
+                strokeWidth = 1.8f * scale
+            )
+            drawLine(
+                color = Color(0xFFFEF08A),
+                start = Offset(x + 2f * scale + eyeDir, y - 13f * scale + squish),
+                end = Offset(x + 6f * scale + eyeDir, y - 9f * scale + squish),
+                strokeWidth = 1.8f * scale
+            )
+            drawLine(
+                color = Color(0xFFFEF08A),
+                start = Offset(x + 6f * scale + eyeDir, y - 13f * scale + squish),
+                end = Offset(x + 2f * scale + eyeDir, y - 9f * scale + squish),
+                strokeWidth = 1.8f * scale
+            )
+
+            // Orbiting dizzy stars
+            for (i in 0..2) {
+                val angle = (enemy.dizzyAngle * 3f + (i * Math.PI.toFloat() * 2f) / 3f)
+                val starX = x + kotlin.math.cos(angle) * 16f * scale
+                val starY = y - 24f * scale + kotlin.math.sin(angle) * 5f * scale
+                drawCircle(color = Color(0xFFFDE047), radius = 3f * scale, center = Offset(starX, starY))
+                drawCircle(color = Color.White, radius = 1.2f * scale, center = Offset(starX, starY))
+            }
+        } else {
+            // Glowing red undead eyes
+            drawCircle(color = Color.White, radius = 3.5f * scale, center = Offset(x - 4f * scale + eyeDir, y - 10f * scale + squish))
+            drawCircle(color = Color.White, radius = 3.5f * scale, center = Offset(x + 4f * scale + eyeDir, y - 10f * scale + squish))
+            drawCircle(color = Color(0xFFDC2626), radius = 1.8f * scale, center = Offset(x - 4f * scale + eyeDir * 1.3f, y - 10f * scale + squish))
+            drawCircle(color = Color(0xFFDC2626), radius = 1.8f * scale, center = Offset(x + 4f * scale + eyeDir * 1.3f, y - 10f * scale + squish))
+        }
+    } else if (enemy.type == EnemyType.SLIME) {
         // Cute Purple Slime
         drawOval(
             color = Color(0xFFA855F7),

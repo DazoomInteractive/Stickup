@@ -27,7 +27,8 @@ fun ShopDialog(
     prefs: GamePreferences,
     sound: SoundManager,
     onDismiss: () -> Unit,
-    onApplyCustomization: () -> Unit
+    onApplyCustomization: () -> Unit,
+    onNavigateToMenu: () -> Unit = {}
 ) {
     var activeTab by remember { mutableStateOf(0) } // 0: Upgrades, 1: Skins, 2: Trails, 3: Backgrounds
     var bankedCoins by remember { mutableStateOf(prefs.bankedCoins) }
@@ -98,11 +99,42 @@ fun ShopDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Tab Content
-                when (activeTab) {
-                    0 -> UpgradesTab(prefs, sound, bankedCoins) { newCoins -> bankedCoins = newCoins }
-                    1 -> SkinsTab(prefs, sound, bankedCoins, { newCoins -> bankedCoins = newCoins }, onApplyCustomization)
-                    2 -> TrailsTab(prefs, sound, bankedCoins, { newCoins -> bankedCoins = newCoins }, onApplyCustomization)
-                    3 -> BackgroundsTab(prefs, sound, bankedCoins, { newCoins -> bankedCoins = newCoins }, onApplyCustomization)
+                Box(modifier = Modifier.weight(1f)) {
+                    when (activeTab) {
+                        0 -> UpgradesTab(prefs, sound, bankedCoins) { newCoins -> bankedCoins = newCoins }
+                        1 -> SkinsTab(prefs, sound, bankedCoins, { newCoins -> bankedCoins = newCoins }, onApplyCustomization)
+                        2 -> TrailsTab(prefs, sound, bankedCoins, { newCoins -> bankedCoins = newCoins }, onApplyCustomization)
+                        3 -> BackgroundsTab(prefs, sound, bankedCoins, { newCoins -> bankedCoins = newCoins }, onApplyCustomization)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Dual bottom navigation buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = onNavigateToMenu,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("🏠 MAIN MENU", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("🎮 PLAY GAME", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                    }
                 }
             }
         }

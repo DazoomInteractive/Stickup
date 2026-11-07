@@ -165,6 +165,10 @@ export class AudioManager {
     window.setTimeout(() => this.tone(1046.5, 0.35, 'triangle', 0.24), 280); // C6
   }
 
+  playShoot(): void {
+    this.tone(620, 0.12, 'triangle', 0.18, 220);
+  }
+
   private tone(
     freq: number,
     duration: number,
