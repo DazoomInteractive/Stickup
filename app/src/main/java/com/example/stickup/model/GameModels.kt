@@ -205,7 +205,7 @@ data class Enemy(
     var isJumping: Boolean = false,
     var vy: Float = 0f,
     var chaseJumpsRemaining: Int = (1..4).random(),
-    var maxChaseJumps: Int = 3,
+    var maxChaseJumps: Int = (1..4).random(),
     var jumpCooldown: Float = 1.0f,
     var bowBroken: Boolean = false,
     var isAiming: Boolean = false,

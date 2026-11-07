@@ -56,7 +56,7 @@ export class Enemy {
     if (r < 0.32) {
       this.type = 'zombie';
       this.baseVx = 42;
-      this.maxChaseJumps = 2 + Math.floor(Math.random() * 3); // 2, 3, or 4 jumps
+      this.maxChaseJumps = 1 + Math.floor(Math.random() * 4); // 1, 2, 3, or 4 jumps
       this.chaseJumpsRemaining = this.maxChaseJumps;
       this.jumpCooldown = 0.8 + Math.random() * 0.8;
     } else if (r < 0.64) {

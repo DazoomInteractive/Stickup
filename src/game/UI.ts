@@ -573,13 +573,13 @@ export class UI {
     ctx.fill();
     ctx.stroke();
 
-    // Card Header: StickUp v2.0.0
+    // Card Header: StickUp with GAME_VERSION
     ctx.shadowBlur = 0;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#38bdf8';
     ctx.font = '900 17px Roboto, sans-serif';
-    ctx.fillText('StickUp v2.0.0', GAME_WIDTH / 2, cardY + 28);
+    ctx.fillText(`StickUp ${GAME_VERSION}`, GAME_WIDTH / 2, cardY + 28);
 
     // Divider line
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
@@ -676,7 +676,7 @@ export class UI {
   drawMainMenu(ctx: CanvasRenderingContext2D, alpha: number, muted: boolean, bestScore: number): void {
     ctx.globalAlpha = alpha;
 
-    // Top Version badge (2.0.0 V) with solid dark background
+    // Top Version badge (v3.0.0 / GAME_VERSION) with solid dark background
     const verBadgeW = 82;
     const verBadgeH = 26;
     const verBadgeX = 16;

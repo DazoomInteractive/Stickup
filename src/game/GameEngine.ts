@@ -31,7 +31,6 @@ import {
   MULTIPLIER_SPAWN_CHANCE,
   PIXELS_PER_METER,
   PLAYER_WIDTH,
-  HAZARD_MIN_METER,
   HAZARD_INTERVAL_MIN,
   HAZARD_INTERVAL_MAX,
   MAX_HEARTS,
@@ -768,7 +767,7 @@ export class GameEngine {
 
   // ---- Collision ----
 
-  private takeDamage(reason: string): void {
+  private takeDamage(_reason: string): void {
     if (this.player.isInvulnerable() || this.player.hasJetpack) return;
 
     if (this.player.hasShield) {
@@ -887,15 +886,12 @@ export class GameEngine {
             }
 
             let unlocked = false;
-            let totalShards = 0;
             if (offer.type === 'background') {
               const res = this.shop.addBgShards(offer.id, offer.shardsGiven);
               unlocked = res.unlocked;
-              totalShards = res.total;
             } else {
               const res = this.shop.addSkinShards(offer.id, offer.shardsGiven);
               unlocked = res.unlocked;
-              totalShards = res.total;
             }
 
             this.player.bounce();
