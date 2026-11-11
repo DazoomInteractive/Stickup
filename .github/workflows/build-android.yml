@@ -45,22 +45,13 @@ jobs:
           fi
           npx cap sync android
 
-      - name: Validate and Decode Release Keystore
+      - name: Restore Release Keystore From Secret
         run: |
-          if [ -z "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
-            echo "::error::Missing required secret: RELEASE_KEYSTORE_BASE64. Android release builds require a valid signing keystore configured in GitHub Secrets."
-            exit 1
+          mkdir -p android/app
+          if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+            echo "Restored existing release.keystore from GitHub secret."
           fi
-          if [ -z "${{ secrets.RELEASE_STORE_PASSWORD }}" ] || [ -z "${{ secrets.RELEASE_KEY_ALIAS }}" ] || [ -z "${{ secrets.RELEASE_KEY_PASSWORD }}" ]; then
-            echo "::error::Missing one or more required signing secrets: RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, or RELEASE_KEY_PASSWORD."
-            exit 1
-          fi
-          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "${{ runner.temp }}/release.keystore"
-          if [ ! -s "${{ runner.temp }}/release.keystore" ]; then
-            echo "::error::Failed to decode release.keystore from RELEASE_KEYSTORE_BASE64 secret (file is empty)."
-            exit 1
-          fi
-          echo "Successfully validated and prepared release keystore for signing."
 
       - name: Make Gradlew Executable
         run: |
@@ -74,13 +65,8 @@ jobs:
           fi
 
       - name: Build Signed AAB and APK
-        working-directory: android
-        env:
-          RELEASE_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
+          cd android
           chmod +x ./gradlew || true
           ./gradlew :app:bundleRelease :app:assembleRelease --stacktrace
 

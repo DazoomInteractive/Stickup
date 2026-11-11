@@ -22,12 +22,12 @@ android {
     }
     signingConfigs {
         release {
-            def keystorePath = System.getenv("RELEASE_KEYSTORE_PATH") ?: (project.findProperty("RELEASE_KEYSTORE_PATH") ?: (file("release.keystore").exists() ? "release.keystore" : ""))
-            def storePasswordVal = System.getenv("RELEASE_STORE_PASSWORD") ?: (project.findProperty("RELEASE_STORE_PASSWORD") ?: "")
-            def keyAliasVal = System.getenv("RELEASE_KEY_ALIAS") ?: (project.findProperty("RELEASE_KEY_ALIAS") ?: "")
-            def keyPasswordVal = System.getenv("RELEASE_KEY_PASSWORD") ?: (project.findProperty("RELEASE_KEY_PASSWORD") ?: "")
+            def keystorePath = System.getenv("RELEASE_KEYSTORE_PATH") ?: (project.findProperty("RELEASE_KEYSTORE_PATH") ?: (file("release.keystore").exists() ? "release.keystore" : "release.keystore"))
+            def storePasswordVal = System.getenv("RELEASE_STORE_PASSWORD") ?: (project.findProperty("RELEASE_STORE_PASSWORD") ?: "stickup123")
+            def keyAliasVal = System.getenv("RELEASE_KEY_ALIAS") ?: (project.findProperty("RELEASE_KEY_ALIAS") ?: "stickup")
+            def keyPasswordVal = System.getenv("RELEASE_KEY_PASSWORD") ?: (project.findProperty("RELEASE_KEY_PASSWORD") ?: "stickup123")
 
-            if (keystorePath && file(keystorePath).exists()) {
+            if (file(keystorePath).exists()) {
                 storeFile file(keystorePath)
                 storePassword storePasswordVal
                 keyAlias keyAliasVal
