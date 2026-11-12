@@ -150,7 +150,7 @@ export class Enemy {
         // Check landing on solid platforms when descending
         if (this.vy > 0) {
           for (const plat of platforms!) {
-            if (plat.isBroken) continue;
+            if (!plat.isSolid()) continue;
             const feetY = this.y + 16;
             const prevFeetY = feetY - this.vy * dt;
             if (feetY >= plat.y && prevFeetY <= plat.y + 16) {
@@ -197,7 +197,7 @@ export class Enemy {
           let bestDist = 9999;
 
           for (const plat of platforms!) {
-            if (plat === this.platform || plat.isBroken) continue;
+            if (plat === this.platform || !plat.isSolid()) continue;
             const pdy = plat.y - this.y;
             const sameVerticalDir = (dy < 0 && pdy < -30 && pdy > -180) || (dy > 0 && pdy > 30 && pdy < 180);
             if (sameVerticalDir) {

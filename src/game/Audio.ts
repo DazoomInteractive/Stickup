@@ -165,6 +165,13 @@ export class AudioManager {
     window.setTimeout(() => this.tone(1046.5, 0.35, 'triangle', 0.24), 280); // C6
   }
 
+  /** Short rising two-note chime when a skin or sky is unlocked with shards. */
+  playVictory(): void {
+    if (this.muted) return;
+    this.tone(659.25, 0.12, 'triangle', 0.18, 783.99); // E5 -> G5
+    window.setTimeout(() => this.tone(987.77, 0.22, 'triangle', 0.2, 1318.5), 110); // B5 -> E6
+  }
+
   playShoot(): void {
     this.tone(620, 0.12, 'triangle', 0.18, 220);
   }

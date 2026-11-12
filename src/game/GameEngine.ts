@@ -99,6 +99,7 @@ export class GameEngine {
   private sessionLostRelics = 0;
   private sessionRecoveredRelics = 0;
   private hasRevivedInRun = false;
+  private isDying = false;
   private diamondsRecoveredInRun = false;
   private highestY = 0; // track lowest world Y value (highest point)
   private bestScore = 0;
@@ -476,6 +477,7 @@ export class GameEngine {
     this.sessionLostRelics = 0;
     this.sessionRecoveredRelics = 0;
     this.hasRevivedInRun = false;
+    this.isDying = false;
     this.diamondsRecoveredInRun = false;
     this.highestY = this.player.y;
     this.initialBestScore = this.bestScore;
@@ -487,6 +489,8 @@ export class GameEngine {
   }
 
   private gameOver(): void {
+    if (this.isDying || this.state !== STATE.PLAYING) return;
+    this.isDying = true;
     this.audio.playGameOver();
     this.camera.shake(12, 0.45); // Juicy camera shake on fall/defeat
     this.input.reset();
@@ -496,6 +500,7 @@ export class GameEngine {
       this.sessionSavedRelics = Math.ceil(this.relicCount * DEATH_RELIC_KEEP_RATE);
       this.sessionLostRelics = this.relicCount - this.sessionSavedRelics;
       this.addDiamonds(this.sessionSavedRelics);
+      this.relicCount = 0;
     } else {
       this.sessionSavedRelics = 0;
       this.sessionLostRelics = 0;
@@ -768,6 +773,7 @@ export class GameEngine {
   // ---- Collision ----
 
   private takeDamage(_reason: string): void {
+    if (this.isDying) return;
     if (this.player.isInvulnerable() || this.player.hasJetpack) return;
 
     if (this.player.hasShield) {
@@ -1504,7 +1510,7 @@ export class GameEngine {
       this.lava.update(simDt, this.height, this.camera.y, this.vfx);
 
       // Check if player touched the rising lava
-      if (this.lava.touches(this.player.feetY)) {
+      if (!this.isDying && this.lava.touches(this.player.feetY)) {
         if (this.player.hasShield) {
           // Shield absorbs the lava and propels player safely upward!
           this.player.hasShield = false;
@@ -1537,7 +1543,7 @@ export class GameEngine {
       }
 
       // Game over or Heart/Shield rescue: player fell below the bottom edge of the camera view
-      if (this.player.y > this.camera.y + GAME_HEIGHT) {
+      if (!this.isDying && this.player.y > this.camera.y + GAME_HEIGHT) {
         if (this.player.hasShield) {
           // Shield rescues player from falling off screen!
           this.player.hasShield = false;
@@ -1651,7 +1657,7 @@ export class GameEngine {
 
     for (const h of this.hazards) {
       const screenY = this.camera.worldToScreenY(h.y);
-      h.draw(this.ctx, h.x, screenY, this.camera.y);
+      h.draw(this.ctx, h.x, screenY);
     }
 
     for (const s of this.shields) {
@@ -2398,6 +2404,7 @@ export class GameEngine {
       'revive',
       () => {
         this.hasRevivedInRun = true;
+        this.isDying = false;
         this.hearts = this.maxHearts;
         this.player.makeInvulnerable(2.5);
         this.input.reset();
