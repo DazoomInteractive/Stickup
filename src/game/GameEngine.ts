@@ -40,7 +40,7 @@ import {
 import { Player } from './Player';
 import { Platform, type PlatformType } from './Platform';
 import { Relic } from './Relic';
-import { Merchant } from './Merchant';
+import { Merchant, SHARD_OFFERS } from './Merchant';
 import { Enemy } from './Enemy';
 import { Arrow } from './Arrow';
 import { FallingHazard } from './FallingHazard';
@@ -127,6 +127,7 @@ export class GameEngine {
   private lastTime = 0;
   private running = false;
   private smoothDt = 1 / 60;
+  private fadeTimer: number | null = null;
 
   // Performance & Stutter-prevention caches
   private skyGradient: CanvasGradient | null = null;
@@ -284,7 +285,7 @@ export class GameEngine {
     } catch {
       this.privacyConsentAccepted = false;
     }
-    this.isPrivacyModalOpen = false;
+    this.isPrivacyModalOpen = !this.privacyConsentAccepted;
     this.privacyCheckboxChecked = false;
 
     this.loadPersistentCoins();
@@ -369,6 +370,10 @@ export class GameEngine {
     this.canvas.removeEventListener('pointerdown', this.boundPointerDown);
     this.canvas.removeEventListener('touchstart', this.boundTouchStart);
     this.canvas.removeEventListener('click', this.boundClick);
+    if (this.fadeTimer !== null) {
+      window.clearTimeout(this.fadeTimer);
+      this.fadeTimer = null;
+    }
   }
 
   // ---- State transitions with fade ----
@@ -437,7 +442,9 @@ export class GameEngine {
   private fadeTo(newState: GameState): void {
     this.transitionTarget = 0;
     // After fade-out, switch state and fade in
-    window.setTimeout(() => {
+    if (this.fadeTimer !== null) window.clearTimeout(this.fadeTimer);
+    this.fadeTimer = window.setTimeout(() => {
+      this.fadeTimer = null;
       this.state = newState;
       this.transitionTarget = 1;
       if (this.onStateChange) {
@@ -495,7 +502,7 @@ export class GameEngine {
     this.camera.shake(12, 0.45); // Juicy camera shake on fall/defeat
     this.input.reset();
 
-    // Risk & Reward: Keep 65% of unsold relics, 35% are lost to the abyss
+    // Risk & Reward: Keep 25% of unsold diamonds, 75% are lost to the abyss
     if (this.relicCount > 0) {
       this.sessionSavedRelics = Math.ceil(this.relicCount * DEATH_RELIC_KEEP_RATE);
       this.sessionLostRelics = this.relicCount - this.sessionSavedRelics;
@@ -623,7 +630,12 @@ export class GameEngine {
     }
 
     if (Math.random() < MERCHANT_SPAWN_CHANCE) {
-      this.merchants.push(new Merchant(platform));
+      const available = SHARD_OFFERS.filter((o) =>
+        o.type === 'skin'
+          ? !this.shop.unlockedSkins.includes(o.id)
+          : !this.shop.unlockedBackgrounds.includes(o.id),
+      );
+      this.merchants.push(new Merchant(platform, available));
     }
   }
 
@@ -985,6 +997,7 @@ export class GameEngine {
             this.vfx.spawnFloatingText(sx, sy, '💫 STUNNED! (1.8s)', '#fde047');
             this.triggerHaptic([25, 35]);
           } else if (e.type === 'archer') {
+            const alreadyStunned = e.stunTimer > 0;
             // ARCHER ELF STOMP: Do NOT give coins! Stun for 1.8s + 1 of 3 Random Outcomes!
             e.stunTimer = 1.8;
             e.dizzyAngle = 0;
@@ -999,25 +1012,27 @@ export class GameEngine {
             const sy = this.camera.worldToScreenY(e.y);
             this.vfx.spawnDust(sx, sy);
 
-            const roll = Math.random();
-            if (roll < 0.33) {
-              // Outcome 1: Disarm & Ammo Loot (+2 Arrows)
-              this.player.arrowAmmo += 2;
-              this.vfx.spawnSparkle(sx, sy);
-              this.vfx.spawnFloatingText(sx, sy, '🏹 +2 ARROWS LOOTED!', '#38bdf8');
-              this.triggerHaptic([20, 30, 40]);
-            } else if (roll < 0.67) {
-              // Outcome 2: Broken Bow (permanently cannot shoot)
-              e.bowBroken = true;
-              this.vfx.spawnFloatingText(sx, sy, '💥 BOW BROKEN!', '#ef4444');
-              this.triggerHaptic([35, 45]);
-            } else {
-              // Outcome 3: Wild Dizzy Shot
-              const wildAngle = (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.8) - Math.PI / 2;
-              const speed = 310;
-              this.arrows.push(new Arrow(e.x, e.y, Math.cos(wildAngle) * speed, Math.sin(wildAngle) * speed, false));
-              this.vfx.spawnFloatingText(sx, sy, '🌀 WILD SHOT!', '#f59e0b');
-              this.triggerHaptic([20, 20]);
+            if (!alreadyStunned) {
+              const roll = Math.random();
+              if (roll < 0.33) {
+                // Outcome 1: Disarm & Ammo Loot (+2 Arrows)
+                this.player.arrowAmmo += 2;
+                this.vfx.spawnSparkle(sx, sy);
+                this.vfx.spawnFloatingText(sx, sy, '🏹 +2 ARROWS LOOTED!', '#38bdf8');
+                this.triggerHaptic([20, 30, 40]);
+              } else if (roll < 0.67) {
+                // Outcome 2: Broken Bow (permanently cannot shoot)
+                e.bowBroken = true;
+                this.vfx.spawnFloatingText(sx, sy, '💥 BOW BROKEN!', '#ef4444');
+                this.triggerHaptic([35, 45]);
+              } else {
+                // Outcome 3: Wild Dizzy Shot
+                const wildAngle = (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.8) - Math.PI / 2;
+                const speed = 310;
+                this.arrows.push(new Arrow(e.x, e.y, Math.cos(wildAngle) * speed, Math.sin(wildAngle) * speed, false));
+                this.vfx.spawnFloatingText(sx, sy, '🌀 WILD SHOT!', '#f59e0b');
+                this.triggerHaptic([20, 20]);
+              }
             }
           } else {
             // Slime or Goblin: normal stomp kill +5 coins
@@ -1579,6 +1594,8 @@ export class GameEngine {
           }
         }
       }
+    } else {
+      this.camera.updateShake(dt);
     }
 
     this.vfx.update(dt);

@@ -114,8 +114,8 @@ export const COLORS = {
 
 // Game metadata & Anti-Piracy Notice
 export const GAME_VERSION = 'v3.0.0';
-export const STUDIO_NAME = 'DazzomInteractive';
-export const COPYRIGHT_NOTICE = '© 2026 DazzomInteractive. All Rights Reserved.';
+export const STUDIO_NAME = 'DazoomInteractive';
+export const COPYRIGHT_NOTICE = '© 2026 DazoomInteractive. All Rights Reserved.';
 
 // Game states
 export const STATE = {

@@ -447,7 +447,7 @@ export class UI {
 
   /**
    * High-contrast, cinematic Studio Intro (Заставка)
-   * Featuring DazzomInteractive emblem, game logo, and legal anti-piracy warning.
+   * Featuring DazoomInteractive emblem, game logo, and legal anti-piracy warning.
    */
   drawSplash(ctx: CanvasRenderingContext2D, alpha: number, elapsed: number): void {
     ctx.save();
@@ -469,7 +469,7 @@ export class UI {
       }
     }
 
-    // 2. Glowing Studio Emblem (DazzomInteractive Diamond Emblem)
+    // 2. Glowing Studio Emblem (DazoomInteractive Diamond Emblem)
     const logoY = GAME_HEIGHT * 0.17;
     ctx.save();
     ctx.translate(GAME_WIDTH / 2, logoY);
@@ -521,7 +521,7 @@ export class UI {
     ctx.shadowBlur = 8;
     ctx.fillStyle = '#f8fafc';
     ctx.font = '900 22px Roboto, sans-serif';
-    ctx.fillText('DAZZOM INTERACTIVE', GAME_WIDTH / 2, GAME_HEIGHT * 0.26);
+    ctx.fillText('DAZOOM INTERACTIVE', GAME_WIDTH / 2, GAME_HEIGHT * 0.26);
 
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#94a3b8';
@@ -594,15 +594,15 @@ export class UI {
     ctx.font = '500 12px Roboto, sans-serif';
     ctx.fillText('Created & Developed by:', GAME_WIDTH / 2, cardY + 80);
 
-    // DazzomInteractive
+    // DazoomInteractive
     ctx.fillStyle = '#f8fafc';
     ctx.font = '900 17px Roboto, sans-serif';
-    ctx.fillText('DazzomInteractive', GAME_WIDTH / 2, cardY + 112);
+    ctx.fillText('DazoomInteractive', GAME_WIDTH / 2, cardY + 112);
 
-    // © 2026 DazzomInteractive.
+    // © 2026 DazoomInteractive.
     ctx.fillStyle = '#38bdf8';
     ctx.font = 'bold 12px Roboto, sans-serif';
-    ctx.fillText('© 2026 DazzomInteractive.', GAME_WIDTH / 2, cardY + 150);
+    ctx.fillText('© 2026 DazoomInteractive.', GAME_WIDTH / 2, cardY + 150);
 
     // 6. Progress bar (fills in 2.2 seconds, waits for user tap)
     const progW = 260;
@@ -790,7 +790,7 @@ export class UI {
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#f8fafc';
     ctx.font = 'bold 11px Roboto, sans-serif';
-    ctx.fillText('© 2026 DazzomInteractive · All Rights Reserved', GAME_WIDTH / 2, footY + 12);
+    ctx.fillText('© 2026 DazoomInteractive · All Rights Reserved', GAME_WIDTH / 2, footY + 12);
 
     ctx.fillStyle = '#38bdf8';
     ctx.font = 'bold 10px Roboto, sans-serif';
@@ -2350,8 +2350,8 @@ export class UI {
     ctx.fillStyle = '#334155';
     ctx.font = '500 12px Roboto, sans-serif';
     ctx.fillText('• 100% Free & Family-Friendly arcade game', infoX + 14, infoY + 22);
-    ctx.fillText('• No personal data or tracking collected', infoX + 14, infoY + 44);
-    ctx.fillText('• Rewarded Ads provided by Start.io', infoX + 14, infoY + 66);
+    ctx.fillText('• No ads, no accounts, no tracking', infoX + 14, infoY + 44);
+    ctx.fillText('• Progress is saved only on your device', infoX + 14, infoY + 66);
 
     // View Policy Button
     ctx.fillStyle = '#f0f9ff';

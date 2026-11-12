@@ -61,6 +61,20 @@ export class Camera {
     }
   }
 
+  /** Advance only the screen shake (used when the game is not PLAYING). */
+  updateShake(dt: number): void {
+    if (this.shakeTimer > 0) {
+      this.shakeTimer -= dt;
+      const progress = Math.max(0, this.shakeTimer / this.shakeDuration);
+      const currentIntensity = this.shakeIntensity * progress;
+      this.shakeOffsetX = (Math.random() * 2 - 1) * currentIntensity;
+      this.shakeOffsetY = (Math.random() * 2 - 1) * currentIntensity;
+    } else {
+      this.shakeOffsetX = 0;
+      this.shakeOffsetY = 0;
+    }
+  }
+
   reset(): void {
     this.cameraY = 0;
     this.shakeTimer = 0;

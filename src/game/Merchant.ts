@@ -52,15 +52,15 @@ export class Merchant {
   shardOffer: ShardOffer | null = null;
   private animTimer = 0;
 
-  constructor(platform: Platform) {
+  constructor(platform: Platform, availableOffers: ShardOffer[] = SHARD_OFFERS) {
     this.platform = platform;
     this.x = platform.x + platform.width / 2;
     this.y = platform.y - 29;
 
     // 12% chance to be a Rare Mystery Shard Trader ("Kamdan-kam taklif")
-    if (Math.random() < 0.12) {
+    if (availableOffers.length > 0 && Math.random() < 0.12) {
       this.isShardMerchant = true;
-      const pick = SHARD_OFFERS[Math.floor(Math.random() * SHARD_OFFERS.length)];
+      const pick = availableOffers[Math.floor(Math.random() * availableOffers.length)];
       this.shardOffer = pick;
       this.pricePerRelic = 0;
       this.tierIndex = 5; // Special shard tier

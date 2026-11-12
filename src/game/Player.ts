@@ -735,5 +735,6 @@ export class Player {
     this.magnetTimer = 0;
     this.hasMultiplier = false;
     this.multiplierTimer = 0;
+    this.invulnerableTimer = 0;
   }
 }
