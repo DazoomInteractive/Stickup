@@ -57,6 +57,7 @@ import { UI, openPrivacyPolicy } from './UI';
 import { AudioManager } from './Audio';
 import { AdsService } from './AdsService';
 import { ShopManager, SKINS, TRAILS, BACKGROUNDS } from './ShopManager';
+import { roundRectSafe } from './canvasUtils';
 
 export class GameEngine {
   private canvas: HTMLCanvasElement;
@@ -142,9 +143,7 @@ export class GameEngine {
   // Bound handlers (for cleanup & multi-platform touch support)
   private boundPointerMove: (e: PointerEvent) => void;
   private boundPointerDown: (e: PointerEvent) => void;
-  private boundTouchStart: (e: TouchEvent) => void;
-  private boundClick: (e: MouseEvent) => void;
-  private lastTapTime = 0;
+  private boundVisibility: () => void;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -264,14 +263,9 @@ export class GameEngine {
 
     this.boundPointerMove = (e: PointerEvent) => this.onPointerMove(e);
     this.boundPointerDown = (e: PointerEvent) => this.handleTapAt(e.clientX, e.clientY);
-    this.boundTouchStart = (e: TouchEvent) => {
-      if (e.touches && e.touches.length > 0) {
-        const touch = e.touches[0];
-        e.preventDefault();
-        this.handleTapAt(touch.clientX, touch.clientY);
-      }
+    this.boundVisibility = () => {
+      if (document.hidden) this.pauseGame();
     };
-    this.boundClick = (e: MouseEvent) => this.handleTapAt(e.clientX, e.clientY);
 
     try {
       const stored = localStorage.getItem(GameEngine.BEST_SCORE_KEY) || localStorage.getItem('skyjumper_best_score');
@@ -355,8 +349,8 @@ export class GameEngine {
     this.input.attach();
     this.canvas.addEventListener('pointermove', this.boundPointerMove);
     this.canvas.addEventListener('pointerdown', this.boundPointerDown);
-    this.canvas.addEventListener('touchstart', this.boundTouchStart, { passive: false });
-    this.canvas.addEventListener('click', this.boundClick);
+    document.addEventListener('visibilitychange', this.boundVisibility);
+    window.addEventListener('pagehide', this.boundVisibility);
     this.generateInitialPlatforms();
     this.lastTime = performance.now();
     this.rafId = requestAnimationFrame(this.loop);
@@ -368,8 +362,8 @@ export class GameEngine {
     this.input.detach();
     this.canvas.removeEventListener('pointermove', this.boundPointerMove);
     this.canvas.removeEventListener('pointerdown', this.boundPointerDown);
-    this.canvas.removeEventListener('touchstart', this.boundTouchStart);
-    this.canvas.removeEventListener('click', this.boundClick);
+    document.removeEventListener('visibilitychange', this.boundVisibility);
+    window.removeEventListener('pagehide', this.boundVisibility);
     if (this.fadeTimer !== null) {
       window.clearTimeout(this.fadeTimer);
       this.fadeTimer = null;
@@ -423,6 +417,32 @@ export class GameEngine {
     if (this.onStateChange) {
       this.onStateChange(STATE.PLAYING);
     }
+  }
+
+  /**
+   * Android Back button. Returns true if the game handled it,
+   * false if the app should close (only on the main menu).
+   */
+  handleBackButton(): boolean {
+    if (this.isPrivacyModalOpen) return true;
+    if (this.isShopOpen) {
+      this.closeShop();
+      return true;
+    }
+    if (this.state === STATE.PLAYING) {
+      this.pauseGame();
+      return true;
+    }
+    if (this.state === STATE.PAUSED) {
+      this.resumeGame();
+      return true;
+    }
+    if (this.state === STATE.GAME_OVER) {
+      this.goToMainMenu();
+      return true;
+    }
+    if (this.state === STATE.SPLASH) return true;
+    return false; // main menu: let the app close
   }
 
   goToMainMenu(): void {
@@ -1893,7 +1913,7 @@ export class GameEngine {
     this.ctx.shadowOffsetY = 2;
     this.ctx.beginPath();
     if (typeof this.ctx.roundRect === 'function') {
-      this.ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 14);
+      roundRectSafe(this.ctx, badgeX, badgeY, badgeW, badgeH, 14);
     } else {
       this.ctx.rect(badgeX, badgeY, badgeW, badgeH);
     }
@@ -1949,10 +1969,6 @@ export class GameEngine {
   }
 
   private handleTapAt(clientX: number, clientY: number): void {
-    const now = performance.now();
-    if (now - this.lastTapTime < 80) return; // Debounce rapid pointerdown + touchstart/click
-    this.lastTapTime = now;
-
     this.audio.resume();
 
     const rect = this.canvas.getBoundingClientRect();

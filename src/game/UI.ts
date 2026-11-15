@@ -22,6 +22,7 @@ import {
   BACKGROUNDS,
 } from './ShopManager';
 import { AdsService } from './AdsService';
+import { roundRectSafe } from './canvasUtils';
 
 export const PRIVACY_POLICY_URL =
   'https://telegra.ph/Privacy-Policy--Terms-of-Service-for-StickUp-09-27';
@@ -548,7 +549,7 @@ export class UI {
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 11);
+    roundRectSafe(ctx, badgeX, badgeY, badgeW, badgeH, 11);
     ctx.fill();
     ctx.stroke();
 
@@ -569,7 +570,7 @@ export class UI {
     ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
     ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.roundRect(cardX, cardY, cardW, cardH, 14);
+    roundRectSafe(ctx, cardX, cardY, cardW, cardH, 14);
     ctx.fill();
     ctx.stroke();
 
@@ -616,7 +617,7 @@ export class UI {
     // Track background
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.beginPath();
-    ctx.roundRect(progX, progY, progW, progH, 3);
+    roundRectSafe(ctx, progX, progY, progW, progH, 3);
     ctx.fill();
 
     // Filled progress
@@ -624,7 +625,7 @@ export class UI {
     ctx.shadowColor = isLoaded ? 'rgba(34, 197, 94, 0.8)' : 'rgba(56, 189, 248, 0.8)';
     ctx.shadowBlur = 8;
     ctx.beginPath();
-    ctx.roundRect(progX, progY, progW * progress, progH, 3);
+    roundRectSafe(ctx, progX, progY, progW * progress, progH, 3);
     ctx.fill();
     ctx.shadowBlur = 0;
 
@@ -658,7 +659,7 @@ export class UI {
       ctx.shadowBlur = 10;
     }
     ctx.beginPath();
-    ctx.roundRect(btnX, btnY, btnW, btnH, 20);
+    roundRectSafe(ctx, btnX, btnY, btnW, btnH, 20);
     ctx.fill();
     ctx.stroke();
 
@@ -687,7 +688,7 @@ export class UI {
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(verBadgeX, verBadgeY, verBadgeW, verBadgeH, 13);
+    roundRectSafe(ctx, verBadgeX, verBadgeY, verBadgeW, verBadgeH, 13);
     ctx.fill();
     ctx.stroke();
 
@@ -715,7 +716,7 @@ export class UI {
     ctx.strokeStyle = '#f59e0b';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(scorePillX, scorePillY, scorePillW, scorePillH, 18);
+    roundRectSafe(ctx, scorePillX, scorePillY, scorePillW, scorePillH, 18);
     ctx.fill();
     ctx.stroke();
 
@@ -753,7 +754,7 @@ export class UI {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.roundRect(ctrlX, ctrlY, ctrlW, ctrlH, 14);
+    roundRectSafe(ctx, ctrlX, ctrlY, ctrlW, ctrlH, 14);
     ctx.fill();
     ctx.stroke();
 
@@ -782,7 +783,7 @@ export class UI {
     ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(footX, footY, footW, footH, 17);
+    roundRectSafe(ctx, footX, footY, footW, footH, 17);
     ctx.fill();
     ctx.stroke();
 
@@ -835,7 +836,7 @@ export class UI {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(10, 10, scorePillW, 32, 16);
+    roundRectSafe(ctx, 10, 10, scorePillW, 32, 16);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
@@ -868,7 +869,7 @@ export class UI {
     ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.roundRect(10, 48, heartsPillW, heartsPillH, 15);
+    roundRectSafe(ctx, 10, 48, heartsPillW, heartsPillH, 15);
     ctx.fill();
     ctx.stroke();
 
@@ -964,7 +965,7 @@ export class UI {
     ctx.strokeStyle = '#f59e0b';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.roundRect(coinPillX, 10, coinPillW, 32, 16);
+    roundRectSafe(ctx, coinPillX, 10, coinPillW, 32, 16);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
@@ -985,7 +986,7 @@ export class UI {
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.roundRect(diamondPillX, 10, diamondPillW, 32, 16);
+    roundRectSafe(ctx, diamondPillX, 10, diamondPillW, 32, 16);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
@@ -1046,7 +1047,7 @@ export class UI {
     // Rounded pill
     ctx.beginPath();
     if (typeof ctx.roundRect === 'function') {
-      ctx.roundRect(pillX, pillY, pillW, pillH, 23);
+      roundRectSafe(ctx, pillX, pillY, pillW, pillH, 23);
     } else {
       ctx.rect(pillX, pillY, pillW, pillH);
     }
@@ -1216,7 +1217,7 @@ export class UI {
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(cardX, cardY, cardW, cardH, 16);
+    roundRectSafe(ctx, cardX, cardY, cardW, cardH, 16);
     ctx.fill();
     ctx.stroke();
 
@@ -1661,7 +1662,7 @@ export class UI {
     headGrad.addColorStop(1, '#8b5cf6');
     ctx.fillStyle = headGrad;
     ctx.beginPath();
-    ctx.roundRect(cardX, cardY, cardW, headH, [20, 20, 0, 0]);
+    roundRectSafe(ctx, cardX, cardY, cardW, headH, [20, 20, 0, 0]);
     ctx.fill();
 
     // Header Title
@@ -1682,7 +1683,7 @@ export class UI {
     // Coins badge
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.beginPath();
-    ctx.roundRect(coinBadgeX, badgeY, coinBadgeW, badgeH, 14);
+    roundRectSafe(ctx, coinBadgeX, badgeY, coinBadgeW, badgeH, 14);
     ctx.fill();
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fef08a';
@@ -1692,7 +1693,7 @@ export class UI {
     // Diamonds badge
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.beginPath();
-    ctx.roundRect(diamBadgeX, badgeY, diamBadgeW, badgeH, 14);
+    roundRectSafe(ctx, diamBadgeX, badgeY, diamBadgeW, badgeH, 14);
     ctx.fill();
     ctx.fillStyle = '#38bdf8';
     ctx.fillText(`💎 ${diamonds}`, diamBadgeX + diamBadgeW / 2, badgeY + badgeH / 2);

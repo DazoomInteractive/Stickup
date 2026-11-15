@@ -22,6 +22,7 @@ import {
   MAGNET_DURATION,
 } from './constants';
 import type { InputHandler } from './InputHandler';
+import { roundRectSafe } from './canvasUtils';
 
 export class Player {
   x: number;
@@ -568,7 +569,7 @@ export class Player {
       ctx.shadowColor = '#f43f5e';
       ctx.shadowBlur = 8;
       ctx.beginPath();
-      ctx.roundRect(-headR * 1.05, visorY, headR * 2.1, 5, 2.5);
+      roundRectSafe(ctx, -headR * 1.05, visorY, headR * 2.1, 5, 2.5);
       ctx.fill();
       ctx.restore();
     } else if (this.hat === 'viking_horns') {

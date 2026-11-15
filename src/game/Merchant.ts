@@ -8,6 +8,7 @@
 // ============================================================
 
 import type { Platform } from './Platform';
+import { roundRectSafe } from './canvasUtils';
 
 // 5 Market Price Tiers for Diamonds (Coins per Diamond)
 // 15, 30, 55, 90, 160 coins per 💎
@@ -159,11 +160,11 @@ export class Merchant {
     // Big Backpack / Cargo of treasures
     ctx.fillStyle = '#92400e';
     ctx.beginPath();
-    ctx.roundRect(-24, -6 + bobY, 10, 24, 4);
+    roundRectSafe(ctx, -24, -6 + bobY, 10, 24, 4);
     ctx.fill();
     ctx.fillStyle = this.isShardMerchant ? '#a855f7' : '#b45309';
     ctx.beginPath();
-    ctx.roundRect(-23, -4 + bobY, 8, 8, 2);
+    roundRectSafe(ctx, -23, -4 + bobY, 8, 8, 2);
     ctx.fill();
 
     // Market Price Floating Tag
@@ -193,7 +194,7 @@ export class Merchant {
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(-tagWidth / 2, tagY, tagWidth, tagHeight, 8);
+    roundRectSafe(ctx, -tagWidth / 2, tagY, tagWidth, tagHeight, 8);
     ctx.fill();
     ctx.stroke();
 

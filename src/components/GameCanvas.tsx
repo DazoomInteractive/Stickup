@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { GameEngine } from '../game/GameEngine';
 import { GAME_WIDTH, GAME_HEIGHT, STATE } from '../game/constants';
+import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 
 function checkTouchDevice(): boolean {
   if (typeof window === 'undefined') return false;
@@ -32,7 +34,28 @@ export default function GameCanvas() {
     engine.start();
     window.focus();
 
+    let disposed = false;
+    const removers: Array<() => void> = [];
+    if (Capacitor.isNativePlatform()) {
+      void CapApp.addListener('backButton', () => {
+        if (!engine.handleBackButton()) {
+          void CapApp.exitApp();
+        }
+      }).then((h) => {
+        if (disposed) void h.remove();
+        else removers.push(() => void h.remove());
+      });
+      void CapApp.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive) engine.pauseGame();
+      }).then((h) => {
+        if (disposed) void h.remove();
+        else removers.push(() => void h.remove());
+      });
+    }
+
     return () => {
+      disposed = true;
+      removers.forEach((r) => r());
       engine.destroy();
       engineRef.current = null;
     };

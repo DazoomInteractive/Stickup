@@ -14,6 +14,7 @@
 
 import type { Platform } from './Platform';
 import { Arrow } from './Arrow';
+import { roundRectSafe } from './canvasUtils';
 
 export type EnemyType = 'slime' | 'goblin' | 'zombie' | 'archer';
 
@@ -272,7 +273,7 @@ export class Enemy {
       // Forest green hooded cloak
       ctx.fillStyle = '#166534';
       ctx.beginPath();
-      ctx.roundRect(-9, -4 + squishY, 18, 18, [6, 6, 2, 2]);
+      roundRectSafe(ctx, -9, -4 + squishY, 18, 18, [6, 6, 2, 2]);
       ctx.fill();
 
       // Elf Head (fair skin)
@@ -400,7 +401,7 @@ export class Enemy {
       // Tattered clothes / Body
       ctx.fillStyle = '#4c1d95';
       ctx.beginPath();
-      ctx.roundRect(-10, -4 + squishY, 20, 18, [4, 4, 2, 2]);
+      roundRectSafe(ctx, -10, -4 + squishY, 20, 18, [4, 4, 2, 2]);
       ctx.fill();
 
       // Torn cloth hem
@@ -434,7 +435,7 @@ export class Enemy {
       // Outstretched Zombie Arms
       ctx.fillStyle = '#15803d';
       ctx.beginPath();
-      ctx.roundRect(dir > 0 ? 0 : -16, -2 + squishY, 16, 5, 2);
+      roundRectSafe(ctx, dir > 0 ? 0 : -16, -2 + squishY, 16, 5, 2);
       ctx.fill();
 
       if (isStunned) {
@@ -476,7 +477,7 @@ export class Enemy {
 
         ctx.fillStyle = '#052e16';
         ctx.beginPath();
-        ctx.roundRect(-4 + dir * 2, -4 + squishY, 8, 3, 1);
+        roundRectSafe(ctx, -4 + dir * 2, -4 + squishY, 8, 3, 1);
         ctx.fill();
         ctx.fillStyle = '#f8fafc';
         ctx.fillRect(-2 + dir * 2, -4 + squishY, 2, 2);
@@ -507,7 +508,7 @@ export class Enemy {
     } else {
       ctx.fillStyle = '#e11d48';
       ctx.beginPath();
-      ctx.roundRect(-12, -12 + squishY, 24, 24, 8);
+      roundRectSafe(ctx, -12, -12 + squishY, 24, 24, 8);
       ctx.fill();
 
       ctx.fillStyle = '#f59e0b';
