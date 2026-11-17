@@ -814,7 +814,7 @@ export class GameEngine {
 
     if (this.player.hasShield) {
       this.player.hasShield = false;
-      this.player.vy = -1400;
+      this.player.vy = -1400 - this.shop.getShieldBonusBounce();
       this.audio.playShieldBreak();
       this.camera.shake(10, 0.35);
       const sx = this.player.centerX;
@@ -1521,8 +1521,7 @@ export class GameEngine {
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < pullRadius && dist > 1) {
             const pullSpeed = 540 * dt;
-            r.x += (dx / dist) * pullSpeed;
-            r.y += (dy / dist) * pullSpeed;
+            r.pullBy((dx / dist) * pullSpeed, (dy / dist) * pullSpeed);
             if (Math.random() < 0.2) {
               this.vfx.spawnMagnetSpark(r.x, this.camera.worldToScreenY(r.y));
             }
@@ -1535,8 +1534,7 @@ export class GameEngine {
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < pullRadius && dist > 1) {
             const pullSpeed = 540 * dt;
-            c.x += (dx / dist) * pullSpeed;
-            c.y += (dy / dist) * pullSpeed;
+            c.pullBy((dx / dist) * pullSpeed, (dy / dist) * pullSpeed);
             if (Math.random() < 0.2) {
               this.vfx.spawnMagnetSpark(c.x, this.camera.worldToScreenY(c.y));
             }
@@ -1562,7 +1560,7 @@ export class GameEngine {
         if (this.player.hasShield) {
           // Shield absorbs the lava and propels player safely upward!
           this.player.hasShield = false;
-          this.player.vy = -1650;
+          this.player.vy = -1650 - this.shop.getShieldBonusBounce();
           this.audio.playShieldBreak();
           this.camera.shake(11, 0.38);
           const sx = this.player.centerX;
@@ -1596,7 +1594,7 @@ export class GameEngine {
           // Shield rescues player from falling off screen!
           this.player.hasShield = false;
           this.player.y = this.camera.y + GAME_HEIGHT - 80;
-          this.player.vy = -1750;
+          this.player.vy = -1750 - this.shop.getShieldBonusBounce();
           this.audio.playShieldBreak();
           this.camera.shake(12, 0.4);
           const sx = this.player.centerX;

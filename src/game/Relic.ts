@@ -41,6 +41,14 @@ export class Relic {
     this.y = this.baseY + Math.sin(this.bobPhase) * 6;
   }
 
+  /** Called by the magnet: detaches from the platform and moves by (dx, dy). */
+  pullBy(dx: number, dy: number): void {
+    this.platform = null;
+    this.x += dx;
+    this.baseY += dy;
+    this.y += dy;
+  }
+
   draw(ctx: CanvasRenderingContext2D, screenX: number, screenY: number): void {
     ctx.save();
     ctx.translate(screenX, screenY);
