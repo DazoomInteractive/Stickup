@@ -46,6 +46,7 @@ import { Arrow } from './Arrow';
 import { FallingHazard } from './FallingHazard';
 import { Coin } from './Coin';
 import { Shield, HeartPickup } from './Shield';
+import { ArrowPickup } from './ArrowPickup';
 import { Jetpack } from './Jetpack';
 import { Magnet } from './Magnet';
 import { CoinMultiplierItem } from './CoinMultiplierItem';
@@ -69,6 +70,7 @@ export class GameEngine {
   private merchants: Merchant[] = [];
   private enemies: Enemy[] = [];
   private arrows: Arrow[] = [];
+  private arrowPickups: ArrowPickup[] = [];
   private hazards: FallingHazard[] = [];
   private hazardTimer = 12;
   private shields: Shield[] = [];
@@ -489,6 +491,7 @@ export class GameEngine {
     this.merchants = [];
     this.enemies = [];
     this.arrows = [];
+    this.arrowPickups = [];
     this.hazards = [];
     this.hazardTimer = HAZARD_INTERVAL_MIN + Math.random() * (HAZARD_INTERVAL_MAX - HAZARD_INTERVAL_MIN);
     this.shields = [];
@@ -767,6 +770,7 @@ export class GameEngine {
     this.hazards = this.hazards.filter((h) => h.active && h.y < bottomWorldY);
     this.shields = this.shields.filter((s) => !s.collected && s.y < bottomWorldY);
     this.heartPickups = this.heartPickups.filter((h) => !h.collected && h.y < bottomWorldY);
+    this.arrowPickups = this.arrowPickups.filter((a) => !a.collected && a.y < bottomWorldY);
     this.jetpacks = this.jetpacks.filter((j) => !j.collected && j.y < bottomWorldY);
     this.magnets = this.magnets.filter((m) => !m.collected && m.y < bottomWorldY);
     this.multipliers = this.multipliers.filter((m) => !m.collected && m.y < bottomWorldY);
@@ -1032,27 +1036,18 @@ export class GameEngine {
             const sy = this.camera.worldToScreenY(e.y);
             this.vfx.spawnDust(sx, sy);
 
-            if (!alreadyStunned) {
-              const roll = Math.random();
-              if (roll < 0.33) {
-                // Outcome 1: Disarm & Ammo Loot (+2 Arrows)
-                this.player.arrowAmmo += 2;
-                this.vfx.spawnSparkle(sx, sy);
-                this.vfx.spawnFloatingText(sx, sy, '🏹 +2 ARROWS LOOTED!', '#38bdf8');
-                this.triggerHaptic([20, 30, 40]);
-              } else if (roll < 0.67) {
-                // Outcome 2: Broken Bow (permanently cannot shoot)
-                e.bowBroken = true;
-                this.vfx.spawnFloatingText(sx, sy, '💥 BOW BROKEN!', '#ef4444');
-                this.triggerHaptic([35, 45]);
-              } else {
-                // Outcome 3: Wild Dizzy Shot
-                const wildAngle = (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.8) - Math.PI / 2;
-                const speed = 310;
-                this.arrows.push(new Arrow(e.x, e.y, Math.cos(wildAngle) * speed, Math.sin(wildAngle) * speed, false));
-                this.vfx.spawnFloatingText(sx, sy, '🌀 WILD SHOT!', '#f59e0b');
-                this.triggerHaptic([20, 20]);
-              }
+            if (!alreadyStunned && e.ammo > 0) {
+              const stolen = e.ammo;
+              e.ammo = 0;
+              const dir = Math.random() < 0.5 ? -1 : 1;
+              this.arrowPickups.push(
+                new ArrowPickup(e.x, e.y - 12, stolen, dir * (70 + Math.random() * 90), -170),
+              );
+              this.vfx.spawnSparkle(sx, sy);
+              this.vfx.spawnFloatingText(sx, sy, `🏹 ${stolen} ARROWS STOLEN!`, '#38bdf8');
+              this.triggerHaptic([20, 30, 40]);
+            } else if (!alreadyStunned) {
+              this.vfx.spawnFloatingText(sx, sy, '🏹 EMPTY QUIVER', '#94a3b8');
             }
           } else {
             // Slime or Goblin: normal stomp kill +5 coins
@@ -1296,6 +1291,23 @@ export class GameEngine {
       }
     }
 
+    // Stolen arrow bundles
+    for (const ap of this.arrowPickups) {
+      if (ap.collected || !ap.canCollect) continue;
+      const dx = this.player.centerX - ap.x;
+      const dy = this.player.centerY - ap.y;
+      if (Math.sqrt(dx * dx + dy * dy) < ap.radius + this.player.width * 0.45) {
+        ap.collected = true;
+        this.player.arrowAmmo += ap.count;
+        const sx = ap.x;
+        const sy = this.camera.worldToScreenY(ap.y);
+        this.audio.playCoin();
+        this.vfx.spawnSparkle(sx, sy);
+        this.vfx.spawnFloatingText(sx, sy, `🏹 +${ap.count} ARROWS!`, '#38bdf8');
+        this.triggerHaptic([15, 20]);
+      }
+    }
+
     // Jetpacks
     for (const j of this.jetpacks) {
       if (j.collected) continue;
@@ -1465,6 +1477,7 @@ export class GameEngine {
         }
       }
       for (const a of this.arrows) a.update(simDt);
+      for (const ap of this.arrowPickups) ap.update(dt, this.platforms);
       for (const h of this.hazards) h.update(simDt, this.camera.y);
       for (const s of this.shields) s.update(dt);
       for (const j of this.jetpacks) j.update(dt);
@@ -1707,6 +1720,12 @@ export class GameEngine {
       const screenY = this.camera.worldToScreenY(hp.y);
       if (screenY < -50 || screenY > GAME_HEIGHT + 50) continue;
       hp.draw(this.ctx, hp.x, screenY);
+    }
+
+    for (const ap of this.arrowPickups) {
+      const screenY = this.camera.worldToScreenY(ap.y);
+      if (screenY < -50 || screenY > GAME_HEIGHT + 50) continue;
+      ap.draw(this.ctx, ap.x, screenY);
     }
 
     for (const j of this.jetpacks) {

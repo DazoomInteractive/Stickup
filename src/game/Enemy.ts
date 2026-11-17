@@ -44,6 +44,7 @@ export class Enemy {
 
   // Archer Elf Specific
   bowBroken = false;
+  ammo = 0; // arrows left in the quiver (archer only)
   shootCooldown = 2.5;
   isAiming = false;
   aimAngle = 0;
@@ -67,6 +68,7 @@ export class Enemy {
       this.chaseJumpsRemaining = this.maxChaseJumps;
       this.jumpCooldown = 1.2 + Math.random() * 0.8;
       this.shootCooldown = 2.2 + Math.random() * 1.2;
+      this.ammo = 1 + Math.floor(Math.random() * 7); // 1 to 7 arrows
     } else if (r < 0.82) {
       this.type = 'slime';
       this.baseVx = 45;
@@ -97,7 +99,7 @@ export class Enemy {
     this.animTimer += dt * 7;
 
     // ARCHER ELF AIMING & SHOOTING LOGIC (360° except straight down)
-    if (this.type === 'archer' && !this.bowBroken && playerX !== undefined && playerY !== undefined) {
+    if (this.type === 'archer' && !this.bowBroken && this.ammo > 0 && playerX !== undefined && playerY !== undefined) {
       const dx = playerX - this.x;
       const dy = playerY - this.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -126,6 +128,7 @@ export class Enemy {
           const arrowVx = Math.cos(targetAngle) * speed;
           const arrowVy = Math.sin(targetAngle) * speed;
           this.pendingArrows.push(new Arrow(this.x + Math.cos(targetAngle) * 16, this.y + Math.sin(targetAngle) * 16, arrowVx, arrowVy, false));
+          this.ammo--;
         }
       } else {
         this.isAiming = false;
