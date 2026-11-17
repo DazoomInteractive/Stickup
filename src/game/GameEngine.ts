@@ -843,8 +843,9 @@ export class GameEngine {
   }
 
   private checkCollisions(dt: number): void {
-    // Only collide when falling
-    if (this.player.vy < 0) return;
+    // Platforms, merchants, enemies, rocks and arrows only collide when falling.
+    // Pickups can be collected at any time.
+    const falling = this.player.vy >= 0;
 
     const feet = this.player.feetY;
     // Real time-dependent previous position to prevent frame-drop tunneling
@@ -852,7 +853,7 @@ export class GameEngine {
     const px = this.player.x;
     const pw = this.player.width;
 
-    for (const p of this.platforms) {
+    for (const p of falling ? this.platforms : []) {
       if (!p.isSolid()) continue;
       // Horizontal overlap (with generous 4px forgiving margin)
       if (px + pw < p.x - 2 || px > p.x + p.width + 2) continue;
@@ -905,7 +906,7 @@ export class GameEngine {
     }
 
     // Merchants (Real-time dynamic trade without pausing)
-    for (const m of this.merchants) {
+    for (const m of falling ? this.merchants : []) {
       if (!m.active || m.sold) continue;
       const dx = this.player.centerX - m.x;
       const dy = this.player.centerY - m.y;
@@ -998,7 +999,7 @@ export class GameEngine {
     }
 
     // Enemies (Stomp from above or hit!)
-    for (const e of this.enemies) {
+    for (const e of falling ? this.enemies : []) {
       if (!e.active) continue;
       const dx = this.player.centerX - e.x;
       const dy = this.player.centerY - e.y;
@@ -1098,7 +1099,7 @@ export class GameEngine {
     }
 
     // Falling Hazards (Adrenaline Rocks)
-    for (const h of this.hazards) {
+    for (const h of falling ? this.hazards : []) {
       if (!h.active || h.warningTimer > 0) continue;
       const dx = this.player.centerX - h.x;
       const dy = this.player.centerY - h.y;
@@ -1191,7 +1192,7 @@ export class GameEngine {
     }
 
     // Arrows (Fired by Archer Enemies or Player)
-    for (const a of this.arrows) {
+    for (const a of falling ? this.arrows : []) {
       if (!a.active) continue;
 
       if (a.isPlayerArrow) {
@@ -1780,6 +1781,7 @@ export class GameEngine {
         this.player.multiplierTimer,
         this.hearts,
         this.maxHearts,
+        this.player.arrowAmmo,
       );
     }
 

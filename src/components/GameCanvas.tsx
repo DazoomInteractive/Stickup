@@ -174,9 +174,9 @@ export default function GameCanvas() {
       <Box
         sx={{
           position: 'relative',
-          width: { xs: '100%', md: 'auto' },
-          height: { xs: '100%', md: 'auto' },
-          aspectRatio: { xs: 'unset', md: '9 / 16' },
+          width: { xs: 'min(100vw, calc(100dvh * 9 / 16))', md: 'auto' },
+          height: { xs: 'auto', md: 'auto' },
+          aspectRatio: '9 / 16',
           maxWidth: { xs: '100vw', md: '450px' },
           maxHeight: { xs: '100dvh', md: 'min(94dvh, 880px)' },
           boxShadow: {

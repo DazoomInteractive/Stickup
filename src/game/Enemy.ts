@@ -203,7 +203,7 @@ export class Enemy {
           for (const plat of platforms!) {
             if (plat === this.platform || !plat.isSolid()) continue;
             const pdy = plat.y - this.y;
-            const sameVerticalDir = (dy < 0 && pdy < -30 && pdy > -180) || (dy > 0 && pdy > 30 && pdy < 180);
+            const sameVerticalDir = (dy < 0 && pdy < -30 && pdy > -130) || (dy > 0 && pdy > 30 && pdy < 180);
             if (sameVerticalDir) {
               const pdx = (plat.x + plat.width / 2) - this.x;
               const d = Math.sqrt(pdx * pdx + pdy * pdy);

@@ -821,6 +821,7 @@ export class UI {
     multiplierTimer = 0,
     hearts = 3,
     maxHearts = 3,
+    arrowAmmo = 0,
   ): void {
     ctx.save();
 
@@ -952,6 +953,27 @@ export class UI {
 
     ctx.shadowBlur = 4;
     ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+
+    // ARROW COUNT pill under the hearts/power-ups (only when the player has arrows)
+    if (arrowAmmo > 0) {
+      const arrowPillW = 74;
+      const arrowPillH = 26;
+      const arrowPillY = powerupY === 88 ? 84 : powerupY - 8;
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      roundRectSafe(ctx, 10, arrowPillY, arrowPillW, arrowPillH, 13);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#e0f2fe';
+      ctx.font = 'bold 14px Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`🏹 ×${arrowAmmo}`, 20, arrowPillY + 13.5);
+      ctx.restore();
+    }
 
     // 4. COIN on top-right (with dark pill backing)
     const coinText = `🪙 ${coins}`;
