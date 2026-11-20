@@ -36,6 +36,8 @@ import {
   MAX_HEARTS,
   HEART_SPAWN_START_METER,
   HEART_SPAWN_CHANCE,
+  AUTO_FIRE_RANGE,
+  AUTO_FIRE_COOLDOWN,
 } from './constants';
 import { Player } from './Player';
 import { Platform, type PlatformType } from './Platform';
@@ -110,6 +112,8 @@ export class GameEngine {
   private isNewBest = false;
   private recordCelebrated = false;
   private hyperSpeedAnnounced = false;
+  private speedStepAnnounced = 0;
+  private autoFireTimer = 0;
 
   // Shop & Progression State
   private shop: ShopManager = new ShopManager();
@@ -403,6 +407,44 @@ export class GameEngine {
     this.triggerHaptic(20);
   }
 
+  /** Auto-fire: shoot the nearest visible enemy while the player has arrows (no button needed). */
+  private updateAutoFire(dt: number): void {
+    if (this.player.arrowAmmo <= 0) {
+      this.autoFireTimer = 0;
+      return;
+    }
+    this.autoFireTimer -= dt;
+    if (this.autoFireTimer > 0) return;
+
+    let target: Enemy | null = null;
+    let bestDist = AUTO_FIRE_RANGE;
+    for (const e of this.enemies) {
+      if (!e.active || e.stunTimer > 0) continue;
+      const screenY = this.camera.worldToScreenY(e.y);
+      if (screenY < 0 || screenY > GAME_HEIGHT) continue;
+      const ex = e.x - this.player.centerX;
+      const ey = e.y - this.player.centerY;
+      const dist = Math.sqrt(ex * ex + ey * ey);
+      if (dist < bestDist) {
+        bestDist = dist;
+        target = e;
+      }
+    }
+    if (!target) return;
+
+    const originX = this.player.centerX;
+    const originY = this.player.centerY - 10;
+    const dx = target.x - originX;
+    const dy = target.y - originY;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const speed = 360;
+    this.player.arrowAmmo--;
+    this.arrows.push(new Arrow(originX, originY, (dx / len) * speed, (dy / len) * speed, true));
+    this.audio.playShoot();
+    this.triggerHaptic(15);
+    this.autoFireTimer = AUTO_FIRE_COOLDOWN;
+  }
+
   pauseGame(): void {
     if (this.state !== STATE.PLAYING) return;
     this.state = STATE.PAUSED;
@@ -514,6 +556,8 @@ export class GameEngine {
     this.isNewBest = false;
     this.recordCelebrated = false;
     this.hyperSpeedAnnounced = false;
+    this.speedStepAnnounced = 0;
+    this.autoFireTimer = 0;
     this.cleanupTimer = 0;
     this.generateInitialPlatforms();
   }
@@ -603,9 +647,11 @@ export class GameEngine {
     }
 
     // High altitudes: all platform types
+    // Moving platform share grows with altitude: 25% (up to 1000 m), 30% (1000-1500 m), 35% (1500 m+)
+    const movingShare = this.height >= 1500 ? 0.35 : this.height >= 1000 ? 0.30 : 0.25;
     if (r < 0.20) return 'breakable';
     if (r < 0.35) return 'fading';
-    if (r < 0.60) return 'moving';
+    if (r < 0.35 + movingShare) return 'moving';
     return 'static';
   }
 
@@ -1051,7 +1097,7 @@ export class GameEngine {
               this.vfx.spawnFloatingText(sx, sy, '🏹 EMPTY QUIVER', '#94a3b8');
             }
           } else {
-            // Slime or Goblin: normal stomp kill +5 coins
+            // Slime or Goblin: normal stomp kill (no coins)
             e.active = false;
             this.player.bounce();
             this.player.vy = -1150; // Extra bounce boost
@@ -1060,9 +1106,7 @@ export class GameEngine {
             const sx = e.x;
             const sy = this.camera.worldToScreenY(e.y);
             this.vfx.spawnDust(sx, sy);
-            this.vfx.spawnFloatingText(sx, sy, 'STOMPED! +5 🪙', '#4ade80');
-            this.coinCount += 5;
-            this.addCoins(5);
+            this.vfx.spawnFloatingText(sx, sy, 'STOMPED!', '#4ade80');
             this.triggerHaptic([20, 30]);
           }
         } else if (e.stunTimer > 0) {
@@ -1210,9 +1254,7 @@ export class GameEngine {
             const sx = e.x;
             const sy = this.camera.worldToScreenY(e.y);
             this.vfx.spawnDust(sx, sy);
-            this.vfx.spawnFloatingText(sx, sy, '🎯 BULLSEYE! +10 🪙', '#38bdf8');
-            this.coinCount += 10;
-            this.addCoins(10);
+            this.vfx.spawnFloatingText(sx, sy, '🎯 BULLSEYE!', '#38bdf8');
             this.triggerHaptic([20, 30]);
             break;
           }
@@ -1443,11 +1485,25 @@ export class GameEngine {
         }
       }
 
-      // 1000m+ Dynamic Speed Scaling: +50% speed increase
+      // Speed steps: +12.5% at 250, 500, 750 and 1000 m (total +50%)
       const isHyperSpeed = this.height >= 1000;
-      const speedMultiplier = isHyperSpeed
-        ? 1.5
-        : 1.0 + Math.min(0.5, Math.max(0, this.height - 250) / 1500);
+      const speedStep = Math.min(4, Math.floor(this.height / 250));
+      const speedMultiplier = 1 + 0.125 * speedStep;
+
+      if (speedStep > this.speedStepAnnounced) {
+        this.speedStepAnnounced = speedStep;
+        if (speedStep < 4) {
+          this.audio.playSpring();
+          this.camera.shake(4, 0.2);
+          this.vfx.spawnFloatingText(
+            GAME_WIDTH / 2,
+            GAME_HEIGHT * 0.4,
+            `⚡ SPEED +12.5%! (x${speedMultiplier.toFixed(3)})`,
+            '#f59e0b',
+          );
+          this.triggerHaptic([20, 30]);
+        }
+      }
 
       if (isHyperSpeed && !this.hyperSpeedAnnounced) {
         this.hyperSpeedAnnounced = true;
@@ -1478,6 +1534,7 @@ export class GameEngine {
         }
       }
       for (const a of this.arrows) a.update(simDt);
+      this.updateAutoFire(simDt);
       for (const ap of this.arrowPickups) ap.update(dt, this.platforms);
       for (const h of this.hazards) h.update(simDt, this.camera.y);
       for (const s of this.shields) s.update(dt);

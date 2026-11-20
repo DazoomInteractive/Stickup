@@ -89,19 +89,6 @@ export default function GameCanvas() {
     else engineRef.current?.setTouchRight(false);
   };
 
-  const lastShootTimeRef = useRef<number>(0);
-
-  const handleShoot = (e: React.SyntheticEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const now = performance.now();
-    if (now - lastShootTimeRef.current < 200) {
-      return;
-    }
-    lastShootTimeRef.current = now;
-    engineRef.current?.shootPlayerArrow();
-  };
-
   const btnSx = (side: 'left' | 'right') => ({
     position: 'absolute' as const,
     bottom: { xs: 72, sm: 84 },
@@ -128,32 +115,6 @@ export default function GameCanvas() {
     },
   });
 
-  const shootBtnSx = {
-    position: 'absolute' as const,
-    bottom: { xs: 172, sm: 194 },
-    right: { xs: 18, sm: 26 },
-    zIndex: 100,
-    width: { xs: 76, sm: 84 },
-    height: { xs: 76, sm: 84 },
-    borderRadius: '50%',
-    border: '2.5px solid rgba(254, 240, 138, 0.9)',
-    background: 'radial-gradient(circle, rgba(245, 158, 11, 0.85) 0%, rgba(217, 119, 6, 0.92) 100%)',
-    color: '#FFFFFF',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    userSelect: 'none' as const,
-    touchAction: 'none' as const,
-    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4), 0 0 14px rgba(245, 158, 11, 0.35)',
-    transition: 'transform 0.08s ease, background 0.08s ease',
-    '&:active': {
-      transform: 'scale(0.90)',
-      background: 'radial-gradient(circle, rgba(217, 119, 6, 0.95) 0%, rgba(180, 83, 9, 1) 100%)',
-    },
-  };
-
   return (
     <Box
       sx={{
@@ -174,9 +135,9 @@ export default function GameCanvas() {
       <Box
         sx={{
           position: 'relative',
-          width: { xs: 'min(100vw, calc(100dvh * 9 / 16))', md: 'auto' },
-          height: { xs: 'auto', md: 'auto' },
-          aspectRatio: '9 / 16',
+          width: { xs: '100%', md: 'auto' },
+          height: { xs: '100%', md: 'auto' },
+          aspectRatio: { xs: 'unset', md: '9 / 16' },
           maxWidth: { xs: '100vw', md: '450px' },
           maxHeight: { xs: '100dvh', md: 'min(94dvh, 880px)' },
           boxShadow: {
@@ -236,31 +197,6 @@ export default function GameCanvas() {
               sx={btnSx('right')}
             >
               {'\u25B6'}
-            </Box>
-
-            {/* Dedicated Shoot button on the right side */}
-            <Box
-              component="button"
-              onTouchStart={handleShoot}
-              onClick={handleShoot}
-              aria-label="Shoot Arrow"
-              sx={shootBtnSx}
-            >
-              <span style={{ fontSize: '26px', lineHeight: 1 }}>🏹</span>
-              <Typography
-                component="span"
-                sx={{
-                  fontSize: { xs: '0.58rem', sm: '0.65rem' },
-                  fontWeight: 800,
-                  letterSpacing: '0.04em',
-                  lineHeight: 1,
-                  mt: 0.3,
-                  color: '#FFFFFF',
-                  textShadow: '0 1px 3px rgba(0, 0, 0, 0.6)',
-                }}
-              >
-                SHOOT
-              </Typography>
             </Box>
           </>
         )}

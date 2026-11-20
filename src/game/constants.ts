@@ -128,3 +128,7 @@ export const STATE = {
 } as const;
 
 export type GameState = (typeof STATE)[keyof typeof STATE];
+
+/** Auto-fire: max distance (px) to a target enemy and seconds between shots. */
+export const AUTO_FIRE_RANGE = 250;
+export const AUTO_FIRE_COOLDOWN = 0.8;

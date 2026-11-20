@@ -53,71 +53,85 @@ export class Relic {
     ctx.save();
     ctx.translate(screenX, screenY);
 
+    const R = this.radius;
     const pulse = Math.sin(this.bobPhase * 1.5) * 0.15 + 1;
 
-    // Glowing Neon Aura Pulse
-    const aura = ctx.createRadialGradient(0, 0, 2, 0, 0, this.radius * 2.2 * pulse);
-    aura.addColorStop(0, 'rgba(56, 189, 248, 0.7)');
-    aura.addColorStop(0.5, 'rgba(165, 243, 252, 0.35)');
-    aura.addColorStop(1, 'rgba(6, 182, 212, 0)');
+    // Soft glow
+    const aura = ctx.createRadialGradient(0, 0, 2, 0, 0, R * 2 * pulse);
+    aura.addColorStop(0, 'rgba(186, 230, 253, 0.55)');
+    aura.addColorStop(1, 'rgba(125, 211, 252, 0)');
     ctx.fillStyle = aura;
     ctx.beginPath();
-    ctx.arc(0, 0, this.radius * 2.2 * pulse, 0, Math.PI * 2);
+    ctx.arc(0, 0, R * 2 * pulse, 0, Math.PI * 2);
     ctx.fill();
 
-    // Outer Faceted Diamond Polygon (Brilliant Cut)
+    // Classic brilliant-cut diamond: flat table on top, wide crown, pointed pavilion
+    const top = -R * 0.95;
+    const girdle = -R * 0.25;
+    const bottom = R * 1.35;
+    const tableHalf = R * 0.55;
+    const girdleHalf = R * 1.2;
+    const mid = R * 0.3;
+
+    const facet = (pts: Array<[number, number]>, fill: string): void => {
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+    };
+
+    // Pavilion facets (lower part)
+    facet([[-girdleHalf, girdle], [girdleHalf, girdle], [0, bottom]], '#38bdf8');
+    facet([[-girdleHalf, girdle], [-mid, girdle], [0, bottom]], '#0ea5e9');
+    facet([[-mid, girdle], [mid, girdle], [0, bottom]], '#7dd3fc');
+    facet([[mid, girdle], [girdleHalf, girdle], [0, bottom]], '#0284c7');
+    // Crown facets (upper part)
+    facet([[-tableHalf, top], [tableHalf, top], [mid, girdle], [-mid, girdle]], '#e0f2fe');
+    facet([[-tableHalf, top], [-mid, girdle], [-girdleHalf, girdle]], '#bae6fd');
+    facet([[tableHalf, top], [girdleHalf, girdle], [mid, girdle]], '#7dd3fc');
+
+    // Outline
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.lineWidth = 1.3;
+    ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(0, -this.radius * 1.3); // Top apex
-    ctx.lineTo(this.radius * 1.0, -this.radius * 0.4); // Top right shoulder
-    ctx.lineTo(this.radius * 0.75, this.radius * 0.7);  // Mid right
-    ctx.lineTo(0, this.radius * 1.4); // Bottom tip
-    ctx.lineTo(-this.radius * 0.75, this.radius * 0.7); // Mid left
-    ctx.lineTo(-this.radius * 1.0, -this.radius * 0.4); // Top left shoulder
+    ctx.moveTo(-tableHalf, top);
+    ctx.lineTo(tableHalf, top);
+    ctx.lineTo(girdleHalf, girdle);
+    ctx.lineTo(0, bottom);
+    ctx.lineTo(-girdleHalf, girdle);
     ctx.closePath();
-
-    // Prismatic Cyan/Sapphire Diamond Gradient Fill
-    const crystalGrad = ctx.createLinearGradient(-this.radius, -this.radius * 1.2, this.radius, this.radius * 1.2);
-    crystalGrad.addColorStop(0, '#f0fdfa'); // Luminous brilliant white
-    crystalGrad.addColorStop(0.25, '#67e8f9'); // Radiant cyan
-    crystalGrad.addColorStop(0.65, '#0284c7'); // Rich sapphire blue
-    crystalGrad.addColorStop(1, '#0369a1'); // Deep diamond core
-    ctx.fillStyle = crystalGrad;
-    ctx.fill();
-
-    // Internal 3D Refraction Lines (Diamond Facets)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.lineWidth = 1.6;
     ctx.stroke();
 
-    // Inner Facet Triangular Crest
+    // Facet lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 0.9;
     ctx.beginPath();
-    ctx.moveTo(0, -this.radius * 1.3);
-    ctx.lineTo(0, this.radius * 0.4);
-    ctx.lineTo(this.radius * 0.75, this.radius * 0.7);
-    ctx.moveTo(0, this.radius * 0.4);
-    ctx.lineTo(-this.radius * 0.75, this.radius * 0.7);
-    ctx.moveTo(0, -this.radius * 1.3);
-    ctx.lineTo(this.radius * 1.0, -this.radius * 0.4);
-    ctx.moveTo(0, -this.radius * 1.3);
-    ctx.lineTo(-this.radius * 1.0, -this.radius * 0.4);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.lineWidth = 1.2;
+    ctx.moveTo(-girdleHalf, girdle);
+    ctx.lineTo(girdleHalf, girdle);
+    ctx.moveTo(-tableHalf, top);
+    ctx.lineTo(-mid, girdle);
+    ctx.moveTo(tableHalf, top);
+    ctx.lineTo(mid, girdle);
+    ctx.moveTo(-mid, girdle);
+    ctx.lineTo(0, bottom);
+    ctx.moveTo(mid, girdle);
+    ctx.lineTo(0, bottom);
     ctx.stroke();
 
-    // Glowing Stellar Core Star
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(0, 0, 3.2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 4-Point Starlight Glimmer
+    // Twinkling sparkle on the crown
+    const twinkle = 3 + Math.abs(Math.sin(this.bobPhase * 1.3)) * 3;
+    const sx = -R * 0.3;
+    const sy = top + R * 0.45;
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = 1.3;
     ctx.beginPath();
-    ctx.moveTo(0, -8);
-    ctx.lineTo(0, 8);
-    ctx.moveTo(-8, 0);
-    ctx.lineTo(8, 0);
+    ctx.moveTo(sx, sy - twinkle);
+    ctx.lineTo(sx, sy + twinkle);
+    ctx.moveTo(sx - twinkle, sy);
+    ctx.lineTo(sx + twinkle, sy);
     ctx.stroke();
 
     ctx.restore();

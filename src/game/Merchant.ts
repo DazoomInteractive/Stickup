@@ -11,8 +11,8 @@ import type { Platform } from './Platform';
 import { roundRectSafe } from './canvasUtils';
 
 // 5 Market Price Tiers for Diamonds (Coins per Diamond)
-// 15, 30, 55, 90, 160 coins per 💎
-export const MERCHANT_PRICE_TIERS = [15, 30, 55, 90, 160] as const;
+// 6, 12, 22, 36, 64 coins per 💎
+export const MERCHANT_PRICE_TIERS = [6, 12, 22, 36, 64] as const;
 
 export interface ShardOffer {
   type: 'background' | 'skin';
@@ -69,19 +69,19 @@ export class Merchant {
       // Normal Diamond -> Coins Trader
       const roll = Math.random();
       if (roll < 0.35) {
-        this.pricePerRelic = 15;
+        this.pricePerRelic = 6;
         this.tierIndex = 0;
       } else if (roll < 0.65) {
-        this.pricePerRelic = 30;
+        this.pricePerRelic = 12;
         this.tierIndex = 1;
       } else if (roll < 0.85) {
-        this.pricePerRelic = 55;
+        this.pricePerRelic = 22;
         this.tierIndex = 2;
       } else if (roll < 0.95) {
-        this.pricePerRelic = 90;
+        this.pricePerRelic = 36;
         this.tierIndex = 3;
       } else {
-        this.pricePerRelic = 160;
+        this.pricePerRelic = 64;
         this.tierIndex = 4;
       }
     }
